@@ -11,9 +11,10 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::{io, process};
 
-use clap::{Command, Arg, ArgAction};
-use regex::Regex;
+use clap::parser::ValuesRef;
+use clap::{Arg, ArgAction, Command};
 use itertools::Itertools;
+use regex::Regex;
 
 use encrusted_heart::options::Options;
 use encrusted_heart::traits::{BaseOutput, BaseUI};
@@ -33,14 +34,25 @@ fn main() {
         .version(VERSION)
         .about("A zmachine interpreter")
         .arg(Arg::new("debug").long("debug").action(ArgAction::SetTrue))
+        .arg(
+            Arg::new("reset")
+                .long("reset")
+                .short('R')
+                .action(ArgAction::SetTrue),
+        )
         .arg(Arg::new("STORY").required(true))
-        .arg(Arg::new("INPUT").required(true).action(ArgAction::Append))
+        .arg(Arg::new("INPUT").action(ArgAction::Append))
         .get_matches();
     // https://docs.rs/clap/latest/clap/_tutorial/index.html
 
     let debug = matches.get_flag("debug");
-    let story = matches.get_one::<String>("STORY").expect("Story file required.");
-    let input = matches.get_many::<String>("INPUT").expect("Game input required.")
+    let reset = matches.get_flag("reset");
+    let story = matches
+        .get_one::<String>("STORY")
+        .expect("Story file required.");
+    let input = matches
+        .get_many::<String>("INPUT")
+        .unwrap_or(ValuesRef::default())
         .map(|s| s.as_str())
         .join(" ");
 
@@ -52,7 +64,9 @@ fn main() {
     let mut story_file = File::open(story_path).expect("Error opening story file");
     let mut story_data = Vec::new();
 
-    story_file.read_to_end(&mut story_data).expect("Error reading story file");
+    story_file
+        .read_to_end(&mut story_data)
+        .expect("Error reading story file");
 
     let story_version = story_data[0];
     if story_version == 0 || story_version > 8 {
@@ -76,15 +90,21 @@ fn main() {
     let mut zvm = Zmachine::new(story_data, ui, opts);
 
     let save_dir = story_path.parent().unwrap().to_string_lossy().into_owned();
-    let save_name = story_path.file_stem().unwrap().to_string_lossy().into_owned();
+    let save_name = story_path
+        .file_stem()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
     let mut save_path = PathBuf::from(&save_dir);
     save_path.push(save_name + "_save.qz");
 
-    if save_path.is_file() {
+    if !reset && save_path.is_file() {
         let mut save_file = File::open(&save_path).expect("Error opening save file");
         let mut save_data = Vec::new();
 
-        save_file.read_to_end(&mut save_data).expect("Error reading save file");
+        save_file
+            .read_to_end(&mut save_data)
+            .expect("Error reading save file");
         zvm.load_savestate(&save_data);
         // Note: zvm.restore panics here; zvm.load_savestate works instead.
     }
@@ -95,13 +115,19 @@ fn main() {
         Step::ReadChar => {
             zvm.handle_read_char(
                 ZChar::from_char(
-                    input.chars().next().unwrap(), zvm.unicode_table()
-                ).unwrap()
+                    if input.chars().count() == 0 {
+                        ' '
+                    } else {
+                        input.chars().next().unwrap()
+                    },
+                    zvm.unicode_table(),
+                )
+                .unwrap(),
             );
-        },
+        }
         Step::ReadLine => {
             zvm.handle_input(input);
-        },
+        }
         Step::Save(_) | Step::Restore | Step::Done => {
             panic!("Error: Unexpected ZMachine state Step::{:?}", step);
         }
@@ -112,7 +138,8 @@ fn main() {
     for BaseOutput {
         style: _,
         content: text,
-    } in zvm.ui.drain_output() {
+    } in zvm.ui.drain_output()
+    {
         print!("{}", &text);
         io::stdout().flush().unwrap();
         continue;
@@ -128,6 +155,7 @@ fn main() {
 
     // The save PC points to either the save instructions branch data or store
     // data. In either case, this is the last byte of the instruction. (so -1)
-    save_file.write_all(zvm.get_save().as_slice())
+    save_file
+        .write_all(zvm.get_save().as_slice())
         .expect("Error saving file");
 }
