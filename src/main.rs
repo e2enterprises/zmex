@@ -78,7 +78,7 @@ fn main() {
     let save_dir = story_path.parent().unwrap().to_string_lossy().into_owned();
     let save_name = story_path.file_stem().unwrap().to_string_lossy().into_owned();
     let mut save_path = PathBuf::from(&save_dir);
-    save_path.push(save_name + "_save.quetzal");
+    save_path.push(save_name + "_save.qz");
 
     if save_path.is_file() {
         let mut save_file = File::open(&save_path).expect("Error opening save file");

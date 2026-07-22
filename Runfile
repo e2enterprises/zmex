@@ -1,2 +1,2 @@
 start: # start a story
-	RUST_BACKTRACE=1 cargo run stories/$(1).z* $$( echo $(@) | sed "s/^[^ ]* //" )
+	RUST_BACKTRACE=1 cargo run -q stories/$(1).z* $$( echo $(@) | sed "s/^[^ ]* //" )
