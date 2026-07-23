@@ -109,7 +109,7 @@ fn main() {
         // Note: zvm.restore panics here; zvm.load_savestate works instead.
     }
 
-    let step = zvm.step();
+    let mut step = zvm.step();
 
     match step {
         Step::ReadChar => {
@@ -133,33 +133,28 @@ fn main() {
         }
     }
 
-    zvm.step();
+    step = zvm.step();
 
-    // Text formatting:
-    // - trim leading and trailing newlines
-    // - trim trailing ">" prompt character
-    // - separate content strings should always have a single blank line between them
-    //   (ie. "interstitial newline")
-    let mut interstitial_newline = "";
-    for BaseOutput {
-        style: _,
-        content: text,
-    } in zvm.ui.drain_output()
-    {
-        if debug {
-            println!("[debug] text: {:?}", [&text]);
+    loop {
+        let printed_output = print_output(zvm.ui.drain_output(), debug);
+        if printed_output {
+            // loop only until something is printed:
+            break;
+        } else {
+            // if nothing was printed, enter blank input and step zmachine again:
+            match step {
+                Step::ReadChar => {
+                    zvm.handle_read_char(ZChar::from_char(' ', zvm.unicode_table()).unwrap());
+                }
+                Step::ReadLine => {
+                    zvm.handle_input("".to_owned());
+                }
+                Step::Save(_) | Step::Restore | Step::Done => {
+                    panic!("Error: Unexpected ZMachine state Step::{:?}", step);
+                }
+            }
+            step = zvm.step();
         }
-
-        match text.trim_end().trim_end_matches(">").trim() {
-            "" => (), // to respect formatting rules, avoid printing empty text
-            formatted_text => print!("{}{}\n", interstitial_newline, formatted_text),
-        }
-
-        if interstitial_newline.is_empty() {
-            interstitial_newline = "\n";
-        }
-
-        io::stdout().flush().unwrap();
     }
 
     let mut save_file;
@@ -175,4 +170,40 @@ fn main() {
     save_file
         .write_all(zvm.get_save().as_slice())
         .expect("Error saving file");
+}
+
+fn print_output(output: Vec<BaseOutput>, debug: bool) -> bool {
+    let mut printed_text = false;
+    let mut interstitial_newline = "";
+
+    // Text formatting:
+    // - trim leading and trailing newlines
+    // - trim trailing ">" prompt character
+    // - separate content strings should always have a single blank line between them
+    //   (ie. "interstitial newline")
+    for BaseOutput {
+        style: _,
+        content: text,
+    } in output
+    {
+        if debug {
+            println!("[debug] text: {:?}", [&text]);
+        }
+
+        match text.trim_end().trim_end_matches(">").trim() {
+            "" => (), // to respect formatting rules, avoid printing empty text
+            formatted_text => {
+                print!("{}{}\n", interstitial_newline, formatted_text);
+                printed_text = true;
+            }
+        }
+
+        if interstitial_newline.is_empty() {
+            interstitial_newline = "\n";
+        }
+
+        io::stdout().flush().unwrap();
+    }
+
+    printed_text
 }
