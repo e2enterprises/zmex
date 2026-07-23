@@ -135,14 +135,31 @@ fn main() {
 
     zvm.step();
 
+    // Text formatting:
+    // - trim leading and trailing newlines
+    // - trim trailing ">" prompt character
+    // - separate content strings should always have a single blank line between them
+    //   (ie. "interstitial newline")
+    let mut interstitial_newline = "";
     for BaseOutput {
         style: _,
         content: text,
     } in zvm.ui.drain_output()
     {
-        print!("{}", &text);
+        if debug {
+            println!("[debug] text: {:?}", [&text]);
+        }
+
+        match text.trim_end().trim_end_matches(">").trim() {
+            "" => (), // to respect formatting rules, avoid printing empty text
+            formatted_text => print!("{}{}\n", interstitial_newline, formatted_text),
+        }
+
+        if interstitial_newline.is_empty() {
+            interstitial_newline = "\n";
+        }
+
         io::stdout().flush().unwrap();
-        continue;
     }
 
     let mut save_file;
