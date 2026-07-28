@@ -1,7 +1,7 @@
-start: # start a story
-	cd encrusted-nif
-	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1).z* $(@:2)
+elixir: # play a story using Elixir CLI
+	cd exiled_cli
+	run start $(@)
 
-reset: # reset a story
-	cd encrusted-nif
-	RUST_BACKTRACE=1 cargo run -q -- --reset ../stories/$(1).z*
+rust: # play a story using Rust NIF
+	cd encrusted_nif
+	run start $(@)
