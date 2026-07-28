@@ -1,5 +1,7 @@
 start: # start a story
-	RUST_BACKTRACE=1 cargo run -q -- stories/$(1).z* $(@:2)
+	cd encrusted-nif
+	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1).z* $(@:2)
 
 reset: # reset a story
-	RUST_BACKTRACE=1 cargo run -q -- --reset stories/$(1).z*
+	cd encrusted-nif
+	RUST_BACKTRACE=1 cargo run -q -- --reset ../stories/$(1).z*
