@@ -14,7 +14,7 @@ defmodule ExzmCli do
       OptionParser.parse!(
         argv,
         switches: [help: :boolean, reset: :boolean, verbose: :count],
-        aliases: [h: :help, R: :reset]
+        aliases: [h: :help, R: :reset, V: :verbose]
       )
 
     {options, [story_file | input]} = args
@@ -22,12 +22,6 @@ defmodule ExzmCli do
     reset = Keyword.get(options, :reset, false)
     help = Keyword.get(options, :help, false)
     verbose = Keyword.get(options, :verbose, false)
-
-    if verbose do
-      IO.puts("Story: #{story_file}")
-      IO.puts("Input: #{inspect(input)}")
-      IO.puts("Optns: #{inspect(reset: reset, help: help, verbose: verbose)}")
-    end
 
     story_path = Path.join("../stories", story_file)
 
@@ -54,8 +48,27 @@ defmodule ExzmCli do
         end
       end
 
-    {new_save_binary, output} =
-      EncrustedNif.read(story_binary, save_binary, Enum.join(input, " "))
+    input_str = Enum.join(input, " ")
+
+    if verbose do
+      IO.puts("\nDiagnostics")
+      IO.puts("-----------")
+      IO.puts("  Story | #{story_path} · #{byte_size(story_binary) / 1000}kb")
+      IO.puts("   Save | #{save_path} · #{byte_size(save_binary) / 1000}kb")
+      IO.puts("  Input | #{inspect(input)} · #{String.length(input_str)} chars")
+      IO.puts("Options | #{inspect(reset: reset, help: help, verbose: verbose)}")
+    end
+
+    {time_microseconds, {new_save_binary, output}} =
+      if verbose do
+        :timer.tc(&EncrustedNif.read/3, [story_binary, save_binary, input_str])
+      else
+        {nil, EncrustedNif.read(story_binary, save_binary, input_str)}
+      end
+
+    if time_microseconds != nil do
+      IO.puts(" Timing | Z-machine NIF call took #{time_microseconds / 1000}ms\n")
+    end
 
     case File.write(save_path, new_save_binary) do
       :ok -> true
