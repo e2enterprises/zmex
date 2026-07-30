@@ -1,2 +1,2 @@
 start: # run story
-	mix escript.build 1>/dev/null && ./exiled_cli $(@)
+	mix escript.build 1>/dev/null && ./exiled $(@)

@@ -1,2 +1,2 @@
 start: # start a story
-	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1).z* $(@:2)
+	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1) $(@:2)

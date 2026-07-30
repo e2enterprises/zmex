@@ -1,2 +1,2 @@
-/encrusted_cli/target
+**/target/**
 /stories/*_save.qz

@@ -1,7 +1,7 @@
 elixir: # play a story using Elixir CLI
 	cd exiled_cli
-	run start $(@)
+	mix read $(@)
 
 rust: # play a story using Rust NIF
-	cd encrusted_nif
+	cd encrusted_cli
 	run start $(@)

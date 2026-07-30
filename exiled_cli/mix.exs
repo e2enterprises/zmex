@@ -8,9 +8,7 @@ defmodule ExiledCli.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps(),
-      escript: [main_module: ExiledCli],
-      default_task: "escript.build"
+      deps: deps()
     ]
   end
 
@@ -29,8 +27,6 @@ defmodule ExiledCli.MixProject do
   end
 
   defp aliases do
-    [
-      run: ["escript.build", "cmd ./exiled_cli"]
-    ]
+    []
   end
 end
