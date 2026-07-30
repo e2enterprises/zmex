@@ -32,31 +32,47 @@ defmodule ExzmCli do
           "_save.qz"
       )
 
-    story_binary =
+    load_story_binary = fn ->
       case File.read(story_path) do
         {:ok, story_data} -> story_data
         _ -> raise "Failed to read story file."
       end
+    end
 
-    save_binary =
-      if reset do
-        ""
-      else
-        case File.read(save_path) do
-          {:ok, save_data} -> save_data
-          _ -> ""
-        end
+    load_save_binary = fn ->
+      case File.read(save_path) do
+        {:ok, save_data} -> save_data
+        _ -> ""
+      end
+    end
+
+    {story_binary_time, story_binary} =
+      cond do
+        verbose -> :timer.tc(load_story_binary, [])
+        true -> {nil, load_story_binary.()}
+      end
+
+    {save_binary_time, save_binary} =
+      cond do
+        reset -> {nil, ""}
+        verbose -> :timer.tc(load_save_binary, [])
+        true -> {nil, load_save_binary.()}
       end
 
     input_str = Enum.join(input, " ")
 
     if verbose do
-      IO.puts("\nDiagnostics")
-      IO.puts("-----------")
-      IO.puts("  Story | #{story_path} · #{byte_size(story_binary) / 1000}kb")
-      IO.puts("   Save | #{save_path} · #{byte_size(save_binary) / 1000}kb")
-      IO.puts("  Input | #{inspect(input)} · #{String.length(input_str)} chars")
-      IO.puts("Options | #{inspect(reset: reset, help: help, verbose: verbose)}")
+      IO.puts("\n Diagnostics")
+      IO.puts("-------------")
+      IO.puts("   Story | #{story_path} · #{byte_size(story_binary) / 1000}kb")
+      IO.puts("    Save | #{save_path} · #{byte_size(save_binary) / 1000}kb")
+      IO.puts("   Input | #{inspect(input)} · #{String.length(input_str)} chars")
+      IO.puts(" Options | #{inspect(reset: reset, help: help, verbose: verbose)}")
+      IO.puts("  Timing | Loading story data : #{story_binary_time / 1000}ms")
+
+      if !reset do
+        IO.puts("         | Loading save data  : #{save_binary_time / 1000}ms")
+      end
     end
 
     {time_microseconds, {new_save_binary, output}} =
@@ -67,7 +83,7 @@ defmodule ExzmCli do
       end
 
     if time_microseconds != nil do
-      IO.puts(" Timing | Z-machine NIF call took #{time_microseconds / 1000}ms\n")
+      IO.puts("         | Z-machine NIF call : #{time_microseconds / 1000}ms\n")
     end
 
     case File.write(save_path, new_save_binary) do
