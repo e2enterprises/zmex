@@ -9,6 +9,10 @@ end
 defmodule Exzm do
   alias Exzm.EncrustedNif
 
+  # Suppress incorrect Dialyzer warnings due to NIF calls:
+  @dialyzer {:no_return, process_zmachine_inputs: 3}
+  @dialyzer {:no_return, process_zmachine_inputs_with_diagnostics: 3}
+
   # Parameters
   # ----------
   # story_data                  | non-empty binary
@@ -44,10 +48,27 @@ defmodule Exzm do
   # new_game/3 [story_data: binary, input: string, opts?]
   def new_game(story_data, "" <> input, opts)
       when is_binary(story_data) and byte_size(story_data) > 0 do
-    if Keyword.get(opts, :diagnostics) do
-      process_zmachine_input_with_diagnostics(story_data, <<>>, input)
+    include_diagnostics = Keyword.get(opts, :diagnostics)
+
+    {save_data, output, diagnostics} =
+      if include_diagnostics do
+        process_zmachine_input_with_diagnostics(story_data, <<>>, input)
+      else
+        {save_data, output} =
+          process_zmachine_input(story_data, <<>>, input)
+
+        {save_data, output, nil}
+      end
+
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    if !!Keyword.get(opts, :step_through_blank) and String.length(output) == 0 do
+      continue(story_data, save_data, " ", opts)
     else
-      process_zmachine_input(story_data, <<>>, input)
+      if include_diagnostics do
+        {save_data, output, diagnostics}
+      else
+        {save_data, output}
+      end
     end
   end
 
@@ -70,10 +91,27 @@ defmodule Exzm do
   def continue(story_data, save_data, "" <> input, opts)
       when is_binary(story_data) and byte_size(story_data) > 0 and
              is_binary(save_data) and byte_size(save_data) > 0 do
-    if Keyword.get(opts, :diagnostics) do
-      process_zmachine_input_with_diagnostics(story_data, save_data, input)
+    include_diagnostics = Keyword.get(opts, :diagnostics)
+
+    {save_data, output, diagnostics} =
+      if include_diagnostics do
+        process_zmachine_input_with_diagnostics(story_data, save_data, input)
+      else
+        {save_data, output} =
+          process_zmachine_input(story_data, save_data, input)
+
+        {save_data, output, nil}
+      end
+
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    if !!Keyword.get(opts, :step_through_blank) and String.length(output) == 0 do
+      continue(story_data, save_data, " ", opts)
     else
-      process_zmachine_input(story_data, save_data, input)
+      if include_diagnostics do
+        {save_data, output, diagnostics}
+      else
+        {save_data, output}
+      end
     end
   end
 
@@ -93,10 +131,21 @@ defmodule Exzm do
   # Private
   # -------
 
-  defp process_zmachine_input(story_data, save_data, input) do
-    EncrustedNif.process_zmachine_input(story_data, save_data, input)
+  defp format_output("" <> text) do
+    # Trim whitespace and remove trailing prompt character from output text:
+    text |> String.trim() |> String.trim_trailing(">") |> String.trim_trailing()
   end
 
+  defp process_zmachine_input(story_data, save_data, input) do
+    {save_data, output} =
+      EncrustedNif.process_zmachine_input(story_data, save_data, input)
+
+    output = format_output(output)
+
+    {save_data, output}
+  end
+
+  @dialyzer {:no_return, process_zmachine_inputs: 3}
   defp process_zmachine_inputs(story_data, save_data, inputs) do
     [first_input | rest_inputs] = inputs
 
@@ -106,7 +155,7 @@ defmodule Exzm do
     {new_save_data, rest_output} =
       process_zmachine_inputs(story_data, new_save_data, rest_inputs)
 
-    output = first_output <> rest_output
+    output = format_output(first_output <> rest_output)
 
     {new_save_data, output}
   end
@@ -118,6 +167,7 @@ defmodule Exzm do
         [story_data, save_data, input]
       )
 
+    output = format_output(output)
     diagnostics = %{nif_duration_ms: nif_duration / 1000}
 
     {new_save_data, output, diagnostics}
@@ -135,7 +185,7 @@ defmodule Exzm do
     {new_save_data, rest_output, %{nif_duration_ms: rest_nif_duration_ms}} =
       process_zmachine_inputs_with_diagnostics(story_data, new_save_data, rest_inputs)
 
-    output = first_output <> rest_output
+    output = format_output(first_output <> rest_output)
     diagnostics = %{nif_duration_ms: first_nif_duration / 1000 + rest_nif_duration_ms}
 
     {new_save_data, output, diagnostics}

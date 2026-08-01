@@ -69,21 +69,27 @@ defmodule ExzmCli do
       cond do
         !verbose and byte_size(save_data) == 0 ->
           {new_save_data, output} =
-            Exzm.new_game(story_data, input_str)
+            Exzm.new_game(story_data, input_str, step_through_blank: true)
 
           {new_save_data, output, nil}
 
         !!verbose and byte_size(save_data) == 0 ->
-          Exzm.new_game(story_data, input_str, diagnostics: true)
+          Exzm.new_game(story_data, input_str,
+            step_through_blank: true,
+            diagnostics: true
+          )
 
         !verbose ->
           {new_save_data, output} =
-            Exzm.continue(story_data, save_data, input_str)
+            Exzm.continue(story_data, save_data, input_str, step_through_blank: true)
 
           {new_save_data, output, nil}
 
         !!verbose ->
-          Exzm.continue(story_data, save_data, input_str, diagnostics: true)
+          Exzm.continue(story_data, save_data, input_str,
+            step_through_blank: true,
+            diagnostics: true
+          )
       end
 
     if verbose do

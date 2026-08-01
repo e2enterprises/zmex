@@ -12,13 +12,10 @@ fn process_zmachine_input<'a>(
     save_binary: Binary<'a>,
     input: String,
 ) -> NifResult<(Binary<'a>, String)> {
-    let ui = BaseUI::new();
-    let rand32 = || rand::random();
     let mut opts = Options::default();
-    opts.rand_seed = [rand32(), rand32(), rand32(), rand32()];
-    opts.dimensions = (80, 24);
+    opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
 
-    let mut zvm = Zmachine::new(story_binary.to_vec(), ui, opts);
+    let mut zvm = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
 
     if save_binary.len() > 0 {
         zvm.load_savestate(&save_binary);
@@ -36,7 +33,7 @@ fn process_zmachine_input<'a>(
             zvm.handle_read_char(
                 ZChar::from_char(
                     if input.chars().count() == 0 {
-                        ' '
+                        ' ' // If there is no input, just send a blank string.
                     } else {
                         input.chars().next().unwrap()
                     },
@@ -57,40 +54,20 @@ fn process_zmachine_input<'a>(
     }
 
     // Second step: Retrieve z-machine output text as string.
-    let mut step = zvm.step();
-    let mut output;
-    loop {
-        output = format_output(zvm.ui.drain_output());
-        if output.chars().count() > 0 {
-            // loop only until something is printed:
-            break;
-        } else {
-            // if nothing was printed, enter blank input and step zmachine again:
-            match step {
-                Step::ReadChar => {
-                    zvm.handle_read_char(ZChar::from_char(' ', zvm.unicode_table()).unwrap());
-                }
-                Step::ReadLine => {
-                    zvm.handle_input("".to_owned());
-                }
-                Step::Save(_) => {
-                    panic!("Error: Unexpected ZMachine state - Step::Save")
-                }
-                Step::Restore => {
-                    panic!("Error: Unexpected ZMachine state - Step::Restore")
-                }
-                Step::Done => {
-                    panic!("Error: Unexpected ZMachine state - Step::Done")
-                }
-            }
-            step = zvm.step();
-        }
+    zvm.step();
+
+    let mut output = String::new();
+    for BaseOutput {
+        style: _,
+        content,
+    } in zvm.ui.drain_output()
+    {
+        output.push_str(&content);
     }
 
     let save_bytes = zvm.get_save();
 
-    // Must convert from OwnedBinary to Binary to return within tuple.
-    // See:
+    // Must convert from OwnedBinary to Binary to return within tuple. References:
     // https://forum.elixirforum.com/t/return-a-binary-tuple-from-a-rust-nif/58528
     // https://docs.rs/rustler/latest/rustler/types/binary/index.html
     let mut owned_binary: OwnedBinary = OwnedBinary::new(save_bytes.len()).unwrap();
@@ -98,37 +75,6 @@ fn process_zmachine_input<'a>(
     let save_binary = Binary::from_owned(owned_binary, env);
 
     Ok((save_binary, output))
-}
-
-fn format_output(output: Vec<BaseOutput>) -> String {
-    let mut formatted;
-    let mut result = String::new();
-    let mut interstitial_newline = "";
-
-    // Text formatting:
-    // - trim leading and trailing newlines
-    // - trim trailing ">" prompt character
-    // - separate content strings should always have a single blank line between them
-    //   (ie. "interstitial newline")
-    for BaseOutput {
-        style: _,
-        content: text,
-    } in output
-    {
-        formatted = text.trim_end().trim_end_matches(">").trim();
-
-        if formatted.chars().count() > 0 {
-            result += interstitial_newline;
-            result += formatted;
-            result += "\n";
-        }
-
-        if interstitial_newline.is_empty() {
-            interstitial_newline = "\n";
-        }
-    }
-
-    result
 }
 
 rustler::init!("Elixir.Exzm.EncrustedNif");
