@@ -1,15 +1,5 @@
-defmodule ExzmCli.EncrustedNif do
-  use Rustler, otp_app: :exzm_cli, crate: "encrusted_nif"
-
-  def read(_story, _state, _input) do
-    :erlang.nif_error(:nif_not_loaded)
-  end
-end
-
 defmodule ExzmCli do
-  alias ExzmCli.EncrustedNif
-
-  def read(argv) do
+  def step(argv) do
     args =
       OptionParser.parse!(
         argv,
@@ -32,61 +22,75 @@ defmodule ExzmCli do
           "_save.qz"
       )
 
-    load_story_binary = fn ->
+    load_story_data = fn ->
       case File.read(story_path) do
         {:ok, story_data} -> story_data
         _ -> raise "Failed to read story file."
       end
     end
 
-    load_save_binary = fn ->
+    load_save_data = fn ->
       case File.read(save_path) do
         {:ok, save_data} -> save_data
         _ -> ""
       end
     end
 
-    {story_binary_time, story_binary} =
+    {story_data_time, story_data} =
       cond do
-        verbose -> :timer.tc(load_story_binary, [])
-        true -> {nil, load_story_binary.()}
+        verbose -> :timer.tc(load_story_data, [])
+        true -> {nil, load_story_data.()}
       end
 
-    {save_binary_time, save_binary} =
+    {save_data_time, save_data} =
       cond do
-        reset -> {nil, ""}
-        verbose -> :timer.tc(load_save_binary, [])
-        true -> {nil, load_save_binary.()}
+        reset -> {nil, <<>>}
+        verbose -> :timer.tc(load_save_data, [])
+        true -> {nil, load_save_data.()}
       end
 
     input_str = Enum.join(input, " ")
 
     if verbose do
       IO.puts("\n Diagnostics")
-      IO.puts("-------------")
-      IO.puts("   Story | #{story_path} · #{byte_size(story_binary) / 1000}kb")
-      IO.puts("    Save | #{save_path} · #{byte_size(save_binary) / 1000}kb")
+      IO.puts(" -----------")
+      IO.puts("   Story | #{story_path} · #{byte_size(story_data) / 1000}kb")
+      IO.puts("    Save | #{save_path} · #{byte_size(save_data) / 1000}kb")
       IO.puts("   Input | #{inspect(input)} · #{String.length(input_str)} chars")
       IO.puts(" Options | #{inspect(reset: reset, help: help, verbose: verbose)}")
-      IO.puts("  Timing | Loading story data : #{story_binary_time / 1000}ms")
+      IO.puts("  Timing | Loading story data : #{story_data_time / 1000}ms")
 
       if !reset do
-        IO.puts("         | Loading save data  : #{save_binary_time / 1000}ms")
+        IO.puts("         | Loading save data  : #{save_data_time / 1000}ms")
       end
     end
 
-    {time_microseconds, {new_save_binary, output}} =
-      if verbose do
-        :timer.tc(&EncrustedNif.read/3, [story_binary, save_binary, input_str])
-      else
-        {nil, EncrustedNif.read(story_binary, save_binary, input_str)}
+    {new_save_data, output, diagnostics} =
+      cond do
+        !verbose and byte_size(save_data) == 0 ->
+          {new_save_data, output} =
+            Exzm.new_game(story_data, input_str)
+
+          {new_save_data, output, nil}
+
+        !!verbose and byte_size(save_data) == 0 ->
+          Exzm.new_game(story_data, input_str, diagnostics: true)
+
+        !verbose ->
+          {new_save_data, output} =
+            Exzm.continue(story_data, save_data, input_str)
+
+          {new_save_data, output, nil}
+
+        !!verbose ->
+          Exzm.continue(story_data, save_data, input_str, diagnostics: true)
       end
 
-    if time_microseconds != nil do
-      IO.puts("         | Z-machine NIF call : #{time_microseconds / 1000}ms\n")
+    if verbose do
+      IO.puts("         | Z-machine NIF call : #{diagnostics.nif_duration_ms}ms\n")
     end
 
-    case File.write(save_path, new_save_binary) do
+    case File.write(save_path, new_save_data) do
       :ok -> true
       _ -> raise "Failed to write save data to file."
     end

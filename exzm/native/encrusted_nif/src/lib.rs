@@ -3,10 +3,15 @@ use encrusted_heart::traits::{BaseOutput, BaseUI};
 use encrusted_heart::zmachine::{Step, Zmachine};
 use encrusted_heart::zscii::ZChar;
 
-use rustler::{Env, Binary, OwnedBinary, NifResult};
+use rustler::{Binary, Env, NifResult, OwnedBinary};
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn read<'a>(env: Env<'a>, story_binary: Binary<'a>, save_binary: Binary<'a>, input: String) -> NifResult<(Binary<'a>, String)> {
+fn process_zmachine_input<'a>(
+    env: Env<'a>,
+    story_binary: Binary<'a>,
+    save_binary: Binary<'a>,
+    input: String,
+) -> NifResult<(Binary<'a>, String)> {
     let ui = BaseUI::new();
     let rand32 = || rand::random();
     let mut opts = Options::default();
@@ -20,9 +25,13 @@ fn read<'a>(env: Env<'a>, story_binary: Binary<'a>, save_binary: Binary<'a>, inp
         // Note: zvm.restore panics here; zvm.load_savestate works instead.
     }
 
-    let mut step = zvm.step();
-
-    match step {
+    // First step: Prepare z-machine for input and get input type (char or string)
+    match zvm.step() {
+        Step::ReadLine => {
+            zvm.handle_input(input);
+        }
+        // Occasionally stories need to read one character of input only and will
+        // indicate this with Step::ReadChar; send a single character in this case:
         Step::ReadChar => {
             zvm.handle_read_char(
                 ZChar::from_char(
@@ -36,16 +45,19 @@ fn read<'a>(env: Env<'a>, story_binary: Binary<'a>, save_binary: Binary<'a>, inp
                 .unwrap(),
             );
         }
-        Step::ReadLine => {
-            zvm.handle_input(input);
+        Step::Save(_) => {
+            panic!("Error: Unexpected ZMachine state - Step::Save")
         }
-        Step::Save(_) | Step::Restore | Step::Done => {
-            panic!("Error: Unexpected ZMachine state Step::{:?}", step);
+        Step::Restore => {
+            panic!("Error: Unexpected ZMachine state - Step::Restore")
+        }
+        Step::Done => {
+            panic!("Error: Unexpected ZMachine state - Step::Done")
         }
     }
 
-    step = zvm.step();
-
+    // Second step: Retrieve z-machine output text as string.
+    let mut step = zvm.step();
     let mut output;
     loop {
         output = format_output(zvm.ui.drain_output());
@@ -61,8 +73,14 @@ fn read<'a>(env: Env<'a>, story_binary: Binary<'a>, save_binary: Binary<'a>, inp
                 Step::ReadLine => {
                     zvm.handle_input("".to_owned());
                 }
-                Step::Save(_) | Step::Restore | Step::Done => {
-                    panic!("Error: Unexpected ZMachine state Step::{:?}", step);
+                Step::Save(_) => {
+                    panic!("Error: Unexpected ZMachine state - Step::Save")
+                }
+                Step::Restore => {
+                    panic!("Error: Unexpected ZMachine state - Step::Restore")
+                }
+                Step::Done => {
+                    panic!("Error: Unexpected ZMachine state - Step::Done")
                 }
             }
             step = zvm.step();
@@ -113,4 +131,4 @@ fn format_output(output: Vec<BaseOutput>) -> String {
     result
 }
 
-rustler::init!("Elixir.ExzmCli.EncrustedNif");
+rustler::init!("Elixir.Exzm.EncrustedNif");
