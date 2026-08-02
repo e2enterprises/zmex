@@ -6,7 +6,7 @@ use encrusted_heart::zscii::ZChar;
 use rustler::{Binary, Env, NifResult, OwnedBinary};
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn process_zmachine_input<'a>(
+fn send_zmachine_input<'a>(
     env: Env<'a>,
     story_binary: Binary<'a>,
     save_binary: Binary<'a>,

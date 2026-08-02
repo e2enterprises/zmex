@@ -5,3 +5,7 @@ elixir: # play a story using Elixir CLI
 rust: # play a story using Rust NIF
 	cd encrusted_cli
 	run start $(@)
+
+test: # run exzm tests
+	cd exzm
+	mix test $(@)
