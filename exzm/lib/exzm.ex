@@ -1,7 +1,7 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def send_zmachine_input(_story_data, _state_data, _input_string) do
+  def advance_zmachine(_story_data, _state_data, _input_string) do
     :erlang.nif_error(:nif_not_loaded)
   end
 end
@@ -138,7 +138,7 @@ defmodule Exzm do
 
   defp send_zmachine_input(story_data, save_data, input) do
     {save_data, output} =
-      EncrustedNif.send_zmachine_input(story_data, save_data, input)
+      EncrustedNif.advance_zmachine(story_data, save_data, input)
 
     output = format_output(output)
 
@@ -150,7 +150,7 @@ defmodule Exzm do
     [first_input | rest_inputs] = inputs
 
     {new_save_data, first_output} =
-      EncrustedNif.send_zmachine_input(story_data, save_data, first_input)
+      EncrustedNif.advance_zmachine(story_data, save_data, first_input)
 
     {new_save_data, rest_output} =
       send_zmachine_inputs(story_data, new_save_data, rest_inputs)
@@ -163,7 +163,7 @@ defmodule Exzm do
   defp send_zmachine_input_with_diagnostics(story_data, save_data, input) do
     {nif_duration, {new_save_data, output}} =
       :timer.tc(
-        &EncrustedNif.send_zmachine_input/3,
+        &EncrustedNif.advance_zmachine/3,
         [story_data, save_data, input]
       )
 
@@ -178,7 +178,7 @@ defmodule Exzm do
 
     {first_nif_duration, {new_save_data, first_output}} =
       :timer.tc(
-        &EncrustedNif.send_zmachine_input/3,
+        &EncrustedNif.advance_zmachine/3,
         [story_data, save_data, first_input]
       )
 
