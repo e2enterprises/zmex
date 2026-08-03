@@ -1,6 +1,6 @@
 elixir: # play a story using Elixir CLI
 	cd exzm_cli
-	mix read $(@)
+	mix exzm $(@)
 
 rust: # play a story using Rust NIF
 	cd encrusted_cli

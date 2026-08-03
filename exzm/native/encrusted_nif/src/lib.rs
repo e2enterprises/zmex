@@ -11,9 +11,32 @@ fn advance_zmachine<'a>(
     story_binary: Binary<'a>,
     save_binary: Binary<'a>,
     input: String,
-) -> NifResult<(Binary<'a>, String)> {
+    seed: bool,
+    seed_a: i32,
+    seed_b: i32,
+    seed_c: i32,
+    seed_d: i32,
+) -> NifResult<(Binary<'a>, String, i32, i32, i32, i32)> {
     let mut opts = Options::default();
-    opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
+
+    let mut seed_a_i32: i32 = seed_a;
+    let mut seed_b_i32: i32 = seed_b;
+    let mut seed_c_i32: i32 = seed_c;
+    let mut seed_d_i32: i32 = seed_d;
+
+    if seed {
+        let seed_a_u32: u32 = (seed_a_i32 + i32::MAX) as u32;
+        let seed_b_u32: u32 = (seed_b_i32 + i32::MAX) as u32;
+        let seed_c_u32: u32 = (seed_c_i32 + i32::MAX) as u32;
+        let seed_d_u32: u32 = (seed_d_i32 + i32::MAX) as u32;
+        opts.rand_seed = [seed_a_u32, seed_b_u32, seed_c_u32, seed_d_u32];
+    } else {
+        opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
+        seed_a_i32 = (opts.rand_seed[0] - i32::MAX as u32) as i32;
+        seed_b_i32 = (opts.rand_seed[1] - i32::MAX as u32) as i32;
+        seed_c_i32 = (opts.rand_seed[2] - i32::MAX as u32) as i32;
+        seed_d_i32 = (opts.rand_seed[3] - i32::MAX as u32) as i32;
+    }
 
     let mut zvm = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
 
@@ -74,7 +97,7 @@ fn advance_zmachine<'a>(
     owned_binary.as_mut_slice().copy_from_slice(&save_bytes);
     let save_binary = Binary::from_owned(owned_binary, env);
 
-    Ok((save_binary, output))
+    Ok((save_binary, output, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
 }
 
 rustler::init!("Elixir.Exzm.EncrustedNif");

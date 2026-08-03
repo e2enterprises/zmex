@@ -48,16 +48,16 @@ defmodule ExzmTest.Utils do
 
   defp with_diagnostics_or_nil(result) do
     case result do
-      {save, output} -> {save, output, nil}
-      {save, output, diagnostics} -> {save, output, diagnostics}
+      {save, output, seed} -> {save, output, seed, nil}
+      {save, output, seed, diagnostics} -> {save, output, seed, diagnostics}
     end
   end
 
   def play_adventure(opts \\ []) do
     story = load_story("advent.z3")
-    include_diagnostics = Keyword.get(opts, :diagnostics)
+    diagnostics? = Keyword.get(opts, :diagnostics)
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(
         case opts do
           [] -> Exzm.new_game(story)
@@ -68,11 +68,17 @@ defmodule ExzmTest.Utils do
     assert output =~ "Welcome to Adventure!"
     assert output =~ "Do you need instructions? (y/n)"
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "y", opts))
 
     assert output =~ "Direct me with simple commands, like NORTH"
@@ -80,36 +86,54 @@ defmodule ExzmTest.Utils do
     assert output =~ "A Modern Classic"
     assert output =~ "At End Of Road"
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "north", opts))
 
     assert output =~ "In Forest"
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "E", opts))
 
     assert output =~ "In A Valley"
     assert byte_size(save) > 0
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
   end
 
   def play_anchorhead(opts \\ []) do
     story = load_story("anchor.z8")
-    include_diagnostics = Keyword.get(opts, :diagnostics)
+    diagnostics? = Keyword.get(opts, :diagnostics)
     expect_blank_step = !Keyword.get(opts, :step_through_blank)
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(
         case opts do
           [] -> Exzm.new_game(story)
@@ -121,26 +145,37 @@ defmodule ExzmTest.Utils do
     assert output =~ "You take a deep breath of salty air"
     assert output =~ "Welcome to Anchorhead..."
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "", opts))
 
-    {save, output, diagnostics} =
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
+      assert is_number(diagnostics.nif_duration_ms)
+    end
+
+    {save, output, seed, diagnostics} =
       if expect_blank_step do
         # Step through blank step manually:
         assert output == ""
-
-        if include_diagnostics do
-          assert is_number(diagnostics.nif_duration_ms)
-        end
-
         with_diagnostics_or_nil(Exzm.continue(story, save, "", opts))
       else
         # No blank step expected because :step_through_blank was used; do nothing.
-        {save, output, diagnostics}
+        {save, output, seed, diagnostics}
       end
 
     assert output =~ "ANCHORHEAD"
@@ -148,28 +183,46 @@ defmodule ExzmTest.Utils do
     assert output =~ "Type HELP or ABOUT for some useful information."
     assert output =~ "Outside the Real Estate Office"
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "north", opts))
 
     assert output =~ "The street goes west from here."
     assert output =~ "You can enter the office to the east"
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
 
-    {save, output, diagnostics} =
+    {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "E", opts))
 
     assert output =~ "(opening the real estate office door first)"
     assert output =~ "It seems to be locked."
     assert byte_size(save) > 0
 
-    if include_diagnostics do
+    assert match?(
+             {a, b, c, d}
+             when is_integer(a) and is_integer(b) and is_integer(c) and is_integer(d),
+             seed
+           )
+
+    if diagnostics? do
       assert is_number(diagnostics.nif_duration_ms)
     end
   end
