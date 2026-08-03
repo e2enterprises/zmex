@@ -18,6 +18,7 @@ fn main() {
     let matches = Command::new("exzm")
         .version(VERSION)
         .about("A zmachine interpreter")
+        .arg(Arg::new("verbose").long("verbose").action(ArgAction::SetTrue))
         .arg(Arg::new("debug").long("debug").action(ArgAction::SetTrue))
         .arg(
             Arg::new("reset")
@@ -30,6 +31,7 @@ fn main() {
         .get_matches();
     // https://docs.rs/clap/latest/clap/_tutorial/index.html
 
+    let verbose = matches.get_flag("verbose");
     let debug = matches.get_flag("debug");
     let reset = matches.get_flag("reset");
     let story = matches
@@ -69,8 +71,15 @@ fn main() {
     let rand32 = || rand::random();
     let mut opts = Options::default();
     opts.rand_seed = [rand32(), rand32(), rand32(), rand32()];
-    opts.dimensions = (80, 24);
     opts.log_instructions = debug;
+
+    if verbose {
+        println!(
+            "opts.rand_seed: {:?} (range: 0..{:?})",
+            opts.rand_seed,
+            u32::MAX
+        );
+    }
 
     let mut zvm = Zmachine::new(story_data, ui, opts);
 
