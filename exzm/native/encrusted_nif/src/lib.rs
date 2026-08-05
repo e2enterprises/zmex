@@ -60,7 +60,7 @@ fn prime_zmachine<'a>(
     Ok((step, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
 }
 
-#[rustler::nif(schedule = "DirtyCpu")]
+#[rustler::nif]
 fn send_line_to_zmachine<'a>(
     env: Env<'a>,
     story_binary: Binary<'a>,
