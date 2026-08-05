@@ -11,6 +11,14 @@ defmodule ExzmCli do
     seed |> :erlang.term_to_binary() |> Base.encode64(padding: false)
   end
 
+  def format_nif_ms(nif_ms) do
+    if nif_ms > 1 do
+      "#{nif_ms}ms"
+    else
+      "#{nif_ms}ms ✔"
+    end
+  end
+
   def step(argv) do
     args =
       OptionParser.parse!(
@@ -126,24 +134,29 @@ defmodule ExzmCli do
     if verbose do
       IO.puts("    Seed | b64 : #{serialize_seed(seed)}")
       IO.puts("         | raw : #{inspect(seed)}")
-      IO.puts("  Timing | Loading story data           : #{story_time / 1000}ms")
+      IO.puts("  Timing | Loading story data                  : #{story_time / 1000}ms")
 
       if !reset do
-        IO.puts("         | Loading save data            : #{save_time / 1000}ms")
+        IO.puts("         | Loading save data                   : #{save_time / 1000}ms")
       end
 
-      IO.puts("         | Prime Z-machine NIF call     : #{diagnostics.prime_zmachine_nif_ms}ms")
-      IO.puts("         | Detection Z-machine NIF call : #{diagnostics.detect_zmachine_nif_ms}ms")
+      IO.puts(
+        "         | Prime Z-machine NIF call (DirtyCpu) : #{format_nif_ms(diagnostics.prime_zmachine_nif_ms)}"
+      )
+
+      IO.puts(
+        "         | Detection Z-machine NIF call        : #{format_nif_ms(diagnostics.detect_zmachine_nif_ms)}"
+      )
 
       if diagnostics.send_line_to_zmachine_nif_ms > 0 do
         IO.puts(
-          "         | Send Line Z-machine NIF call : #{diagnostics.send_line_to_zmachine_nif_ms}ms"
+          "         | Send Line Z-machine NIF call        : #{format_nif_ms(diagnostics.send_line_to_zmachine_nif_ms)}"
         )
       end
 
       if diagnostics.send_char_to_zmachine_nif_ms > 0 do
         IO.puts(
-          "         | Send Char Z-machine NIF call : #{diagnostics.send_char_to_zmachine_nif_ms}ms"
+          "         | Send Char Z-machine NIF call        : #{format_nif_ms(diagnostics.send_char_to_zmachine_nif_ms)}"
         )
       end
 
