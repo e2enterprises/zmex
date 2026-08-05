@@ -271,13 +271,13 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {save_data, prime_output, state, seed_a, seed_b, seed_c, seed_d} =
+    {state, seed_a, seed_b, seed_c, seed_d} =
       apply(
         &EncrustedNif.prime_zmachine/7,
         [story_data, save_data, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {save_data, send_output, seed_a, seed_b, seed_c, seed_d} =
+    {save_data, output, seed_a, seed_b, seed_c, seed_d} =
       case state do
         "read_line" ->
           apply(
@@ -295,7 +295,6 @@ defmodule Exzm do
           raise(RuntimeError, "unexpected ZMachine State (#{unexpected})")
       end
 
-    output = prime_output <> send_output
     seed = {seed_a, seed_b, seed_c, seed_d}
 
     {save_data, output, seed}
@@ -309,13 +308,13 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {prime_nif_microsec, {save_data, prime_output, state, seed_a, seed_b, seed_c, seed_d}} =
+    {prime_nif_microsec, {state, seed_a, seed_b, seed_c, seed_d}} =
       :timer.tc(
         &EncrustedNif.prime_zmachine/7,
         [story_data, save_data, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {send_nif_microsec, {save_data, send_output, seed_a, seed_b, seed_c, seed_d}} =
+    {send_nif_microsec, {save_data, output, seed_a, seed_b, seed_c, seed_d}} =
       case state do
         "read_line" ->
           :timer.tc(
@@ -353,7 +352,6 @@ defmodule Exzm do
           raise(RuntimeError, "unexpected ZMachine State (#{unexpected})")
       end
 
-    output = prime_output <> send_output
     seed = {seed_a, seed_b, seed_c, seed_d}
 
     {save_data, output, seed, diagnostics}

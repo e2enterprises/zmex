@@ -7,7 +7,6 @@ use rustler::{Binary, Env, NifResult, OwnedBinary};
 
 #[rustler::nif(schedule = "DirtyCpu")]
 fn prime_zmachine<'a>(
-    env: Env<'a>,
     story_binary: Binary<'a>,
     save_binary: Binary<'a>,
     seed: bool,
@@ -15,7 +14,7 @@ fn prime_zmachine<'a>(
     seed_b: i32,
     seed_c: i32,
     seed_d: i32,
-) -> NifResult<(Binary<'a>, String, String, i32, i32, i32, i32)> {
+) -> NifResult<(String, i32, i32, i32, i32)> {
     let mut opts = Options::default();
 
     let mut seed_a_i32: i32 = seed_a;
@@ -58,26 +57,7 @@ fn prime_zmachine<'a>(
         }
     };
 
-    let mut output = String::new();
-    for BaseOutput {
-        style: _,
-        content,
-    } in zvm.ui.drain_output()
-    {
-        output.push_str(&content);
-    }
-
-    // TODO can we remove save here?
-    let save_bytes = zvm.get_save();
-
-    // Must convert from OwnedBinary to Binary to return within tuple. References:
-    // https://forum.elixirforum.com/t/return-a-binary-tuple-from-a-rust-nif/58528
-    // https://docs.rs/rustler/latest/rustler/types/binary/index.html
-    let mut owned_binary: OwnedBinary = OwnedBinary::new(save_bytes.len()).unwrap();
-    owned_binary.as_mut_slice().copy_from_slice(&save_bytes);
-    let save_binary = Binary::from_owned(owned_binary, env);
-
-    Ok((save_binary, output, state, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
+    Ok((state, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
