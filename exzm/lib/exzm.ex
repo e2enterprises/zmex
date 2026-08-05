@@ -1,10 +1,35 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def advance_zmachine(
+  def prime_zmachine(
         _story_data,
         _state_data,
-        _input_string,
+        _seed?,
+        _seed_a,
+        _seed_b,
+        _seed_c,
+        _seed_d
+      ) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def send_line_to_zmachine(
+        _story_data,
+        _state_data,
+        _input,
+        _seed?,
+        _seed_a,
+        _seed_b,
+        _seed_c,
+        _seed_d
+      ) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def send_char_to_zmachine(
+        _story_data,
+        _state_data,
+        _input,
         _seed?,
         _seed_a,
         _seed_b,
@@ -169,6 +194,63 @@ defmodule Exzm do
     text |> String.trim() |> String.trim_trailing(">") |> String.trim_trailing()
   end
 
+  defp send_zmachine_input(story_data, save_data, input, seed) do
+    {save_data, output, seed} =
+      prime_zmachine_then_send(story_data, save_data, input, seed)
+
+    output = format_output(output)
+
+    {save_data, output, seed}
+  end
+
+  defp send_zmachine_inputs(story_data, save_data, inputs, seed) do
+    [first_input | rest_inputs] = inputs
+
+    {save_data, first_output, seed} =
+      prime_zmachine_then_send(story_data, save_data, first_input, seed)
+
+    {save_data, rest_output, seed} =
+      send_zmachine_inputs(story_data, save_data, rest_inputs, seed)
+
+    output = format_output(first_output <> rest_output)
+
+    {save_data, output, seed}
+  end
+
+  defp send_zmachine_input_with_diagnostics(story_data, save_data, input, seed) do
+    {save_data, output, seed, diagnostics} =
+      prime_zmachine_then_send_with_diagnostics(story_data, save_data, input, seed)
+
+    output = format_output(output)
+
+    {save_data, output, seed, diagnostics}
+  end
+
+  defp send_zmachine_inputs_with_diagnostics(story_data, save_data, inputs, seed) do
+    [first_input | rest_inputs] = inputs
+
+    {save_data, first_output, seed, first_diagnostics} =
+      prime_zmachine_then_send_with_diagnostics(story_data, save_data, first_input, seed)
+
+    {save_data, rest_output, seed, rest_diagnostics} =
+      send_zmachine_inputs_with_diagnostics(story_data, save_data, rest_inputs, seed)
+
+    output = format_output(first_output <> rest_output)
+
+    diagnostics = %{
+      prime_zmachine_nif_ms:
+        first_diagnostics.prime_zmachine_nif_ms + rest_diagnostics.prime_zmachine_nif_ms,
+      send_input_to_zmachine_nif_ms:
+        first_diagnostics.send_line_to_zmachine_nif_ms +
+          rest_diagnostics.send_line_to_zmachine_nif_ms,
+      send_char_to_zmachine_nif_ms:
+        first_diagnostics.send_char_to_zmachine_nif_ms +
+          rest_diagnostics.send_char_to_zmachine_nif_ms
+    }
+
+    {save_data, output, seed, diagnostics}
+  end
+
   defp prepare_seed_args({seed_a, seed_b, seed_c, seed_d})
        when is_integer(seed_a) and is_integer(seed_b) and is_integer(seed_c) and
               is_integer(seed_d) do
@@ -181,87 +263,99 @@ defmodule Exzm do
     {seed?, 0, 0, 0, 0}
   end
 
-  defp send_zmachine_input(story_data, save_data, input, seed) do
+  defp prime_zmachine_then_send(
+         story_data,
+         save_data,
+         input,
+         seed
+       ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {save_data, output, seed_a, seed_b, seed_c, seed_d} =
-      EncrustedNif.advance_zmachine(
-        story_data,
-        save_data,
-        input,
-        seed?,
-        seed_a,
-        seed_b,
-        seed_c,
-        seed_d
+    {save_data, prime_output, state, seed_a, seed_b, seed_c, seed_d} =
+      apply(
+        &EncrustedNif.prime_zmachine/7,
+        [story_data, save_data, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
+    {save_data, send_output, seed_a, seed_b, seed_c, seed_d} =
+      case state do
+        "read_line" ->
+          apply(
+            &EncrustedNif.send_line_to_zmachine/8,
+            [story_data, save_data, input, seed?, seed_a, seed_b, seed_c, seed_d]
+          )
+
+        "read_char" ->
+          apply(
+            &EncrustedNif.send_char_to_zmachine/8,
+            [story_data, save_data, input, seed?, seed_a, seed_b, seed_c, seed_d]
+          )
+
+        unexpected ->
+          raise(RuntimeError, "unexpected ZMachine State (#{unexpected})")
+      end
+
+    output = prime_output <> send_output
     seed = {seed_a, seed_b, seed_c, seed_d}
-    output = format_output(output)
 
     {save_data, output, seed}
   end
 
-  defp send_zmachine_inputs(story_data, save_data, inputs, seed) do
-    {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
-    [first_input | rest_inputs] = inputs
-
-    {new_save_data, first_output, seed_a, seed_b, seed_c, seed_d} =
-      EncrustedNif.advance_zmachine(
-        story_data,
-        save_data,
-        first_input,
-        seed?,
-        seed_a,
-        seed_b,
-        seed_c,
-        seed_d
-      )
-
-    seed = {seed_a, seed_b, seed_c, seed_d}
-
-    {new_save_data, rest_output, seed} =
-      send_zmachine_inputs(story_data, new_save_data, rest_inputs, seed)
-
-    output = format_output(first_output <> rest_output)
-
-    {new_save_data, output, seed}
-  end
-
-  defp send_zmachine_input_with_diagnostics(story_data, save_data, input, seed) do
+  defp prime_zmachine_then_send_with_diagnostics(
+         story_data,
+         save_data,
+         input,
+         seed
+       ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {nif_duration, {new_save_data, output, seed_a, seed_b, seed_c, seed_d}} =
+    {prime_nif_microsec, {save_data, prime_output, state, seed_a, seed_b, seed_c, seed_d}} =
       :timer.tc(
-        &EncrustedNif.advance_zmachine/8,
-        [story_data, save_data, input, seed?, seed_a, seed_b, seed_c, seed_d]
+        &EncrustedNif.prime_zmachine/7,
+        [story_data, save_data, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
+    {send_nif_microsec, {save_data, send_output, seed_a, seed_b, seed_c, seed_d}} =
+      case state do
+        "read_line" ->
+          :timer.tc(
+            &EncrustedNif.send_line_to_zmachine/8,
+            [story_data, save_data, input, seed?, seed_a, seed_b, seed_c, seed_d]
+          )
+
+        "read_char" ->
+          :timer.tc(
+            &EncrustedNif.send_char_to_zmachine/8,
+            [story_data, save_data, input, seed?, seed_a, seed_b, seed_c, seed_d]
+          )
+
+        unexpected ->
+          raise(RuntimeError, "unexpected ZMachine State (#{unexpected})")
+      end
+
+    diagnostics =
+      case state do
+        "read_line" ->
+          %{
+            prime_zmachine_nif_ms: prime_nif_microsec / 1000,
+            send_line_to_zmachine_nif_ms: send_nif_microsec / 1000,
+            send_char_to_zmachine_nif_ms: 0
+          }
+
+        "read_char" ->
+          %{
+            prime_zmachine_nif_ms: prime_nif_microsec / 1000,
+            send_line_to_zmachine_nif_ms: 0,
+            send_char_to_zmachine_nif_ms: send_nif_microsec / 1000
+          }
+
+        unexpected ->
+          raise(RuntimeError, "unexpected ZMachine State (#{unexpected})")
+      end
+
+    output = prime_output <> send_output
     seed = {seed_a, seed_b, seed_c, seed_d}
-    output = format_output(output)
-    diagnostics = %{nif_duration_ms: nif_duration / 1000}
 
-    {new_save_data, output, seed, diagnostics}
-  end
-
-  defp send_zmachine_inputs_with_diagnostics(story_data, save_data, inputs, seed) do
-    {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
-    [first_input | rest_inputs] = inputs
-
-    {first_nif_duration, {new_save_data, first_output, seed_a, seed_b, seed_c, seed_d}} =
-      :timer.tc(
-        &EncrustedNif.advance_zmachine/8,
-        [story_data, save_data, first_input, seed?, seed_a, seed_b, seed_c, seed_d]
-      )
-
-    seed = {seed_a, seed_b, seed_c, seed_d}
-
-    {new_save_data, rest_output, seed, %{nif_duration_ms: rest_nif_duration_ms}} =
-      send_zmachine_inputs_with_diagnostics(story_data, new_save_data, rest_inputs, seed)
-
-    output = format_output(first_output <> rest_output)
-    diagnostics = %{nif_duration_ms: first_nif_duration / 1000 + rest_nif_duration_ms}
-
-    {new_save_data, output, seed, diagnostics}
+    {save_data, output, seed, diagnostics}
   end
 end

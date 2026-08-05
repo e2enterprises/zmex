@@ -53,6 +53,16 @@ defmodule ExzmTest.Utils do
     end
   end
 
+  defp assert_valid_diagnostics(diagnostics?, diagnostics) do
+    if diagnostics? do
+      assert is_number(diagnostics.prime_zmachine_nif_ms)
+      assert diagnostics.prime_zmachine_nif_ms > 0
+      # Both of these may be zero if nif wasn't called:
+      assert diagnostics.send_line_to_zmachine_nif_ms >= 0
+      assert diagnostics.send_char_to_zmachine_nif_ms >= 0
+    end
+  end
+
   def play_adventure(opts \\ []) do
     story = load_story("advent.z3")
     diagnostics? = Keyword.get(opts, :diagnostics)
@@ -74,9 +84,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "y", opts))
@@ -92,9 +100,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "north", opts))
@@ -107,9 +113,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "E", opts))
@@ -123,9 +127,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
   end
 
   def play_anchorhead(opts \\ []) do
@@ -151,9 +153,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "", opts))
@@ -164,9 +164,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       if expect_blank_step do
@@ -189,9 +187,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "north", opts))
@@ -205,9 +201,7 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.continue(story, save, "E", opts))
@@ -222,8 +216,6 @@ defmodule ExzmTest.Utils do
              seed
            )
 
-    if diagnostics? do
-      assert is_number(diagnostics.nif_duration_ms)
-    end
+    assert_valid_diagnostics(diagnostics?, diagnostics)
   end
 end

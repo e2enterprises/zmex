@@ -126,13 +126,27 @@ defmodule ExzmCli do
     if verbose do
       IO.puts("    Seed | b64: #{serialize_seed(seed)}")
       IO.puts("         | raw: #{inspect(seed)}")
-      IO.puts("  Timing | Loading story data : #{story_data_time / 1000}ms")
+      IO.puts("  Timing | Loading story data     : #{story_data_time / 1000}ms")
 
       if !reset do
-        IO.puts("         | Loading save data  : #{save_data_time / 1000}ms")
+        IO.puts("         | Loading save data      : #{save_data_time / 1000}ms")
       end
 
-      IO.puts("         | Z-machine NIF call : #{diagnostics.nif_duration_ms}ms\n")
+      IO.puts("         | Prime Z-machine NIF call     : #{diagnostics.prime_zmachine_nif_ms}ms")
+
+      if diagnostics.send_line_to_zmachine_nif_ms > 0 do
+        IO.puts(
+          "         | Send Line Z-machine NIF call : #{diagnostics.send_line_to_zmachine_nif_ms}ms"
+        )
+      end
+
+      if diagnostics.send_char_to_zmachine_nif_ms > 0 do
+        IO.puts(
+          "         | Send Char Z-machine NIF call : #{diagnostics.send_char_to_zmachine_nif_ms}ms"
+        )
+      end
+
+      IO.puts("")
     end
 
     case File.write(save_path, new_save_data) do
