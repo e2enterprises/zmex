@@ -1,7 +1,11 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def prime_zmachine(_story, _save, _seed?, _seed_a, _seed_b, _seed_c, _seed_d) do
+  def prime_zmachine(_story) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def detect_zmachine_input_type(_story, _save, _seed?, _seed_a, _seed_b, _seed_c, _seed_d) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -245,9 +249,11 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
+    EncrustedNif.prime_zmachine(story)
+
     {step, seed_a, seed_b, seed_c, seed_d} =
       apply(
-        &EncrustedNif.prime_zmachine/7,
+        &EncrustedNif.detect_zmachine_input_type/7,
         [story, save, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
@@ -282,9 +288,11 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {prime_nif_microsec, {step, seed_a, seed_b, seed_c, seed_d}} =
+    {prime_nif_microsec, {}} = :timer.tc(&EncrustedNif.prime_zmachine/1, [story])
+
+    {detect_nif_microsec, {step, seed_a, seed_b, seed_c, seed_d}} =
       :timer.tc(
-        &EncrustedNif.prime_zmachine/7,
+        &EncrustedNif.detect_zmachine_input_type/7,
         [story, save, seed?, seed_a, seed_b, seed_c, seed_d]
       )
 
@@ -311,6 +319,7 @@ defmodule Exzm do
         "ReadLine" ->
           %{
             prime_zmachine_nif_ms: prime_nif_microsec / 1000,
+            detect_zmachine_nif_ms: detect_nif_microsec / 1000,
             send_line_to_zmachine_nif_ms: send_nif_microsec / 1000,
             send_char_to_zmachine_nif_ms: 0
           }
@@ -318,6 +327,7 @@ defmodule Exzm do
         "ReadChar" ->
           %{
             prime_zmachine_nif_ms: prime_nif_microsec / 1000,
+            detect_zmachine_nif_ms: detect_nif_microsec / 1000,
             send_line_to_zmachine_nif_ms: 0,
             send_char_to_zmachine_nif_ms: send_nif_microsec / 1000
           }

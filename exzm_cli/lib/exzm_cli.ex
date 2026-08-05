@@ -133,6 +133,7 @@ defmodule ExzmCli do
       end
 
       IO.puts("         | Prime Z-machine NIF call     : #{diagnostics.prime_zmachine_nif_ms}ms")
+      IO.puts("         | Detection Z-machine NIF call : #{diagnostics.detect_zmachine_nif_ms}ms")
 
       if diagnostics.send_line_to_zmachine_nif_ms > 0 do
         IO.puts(
