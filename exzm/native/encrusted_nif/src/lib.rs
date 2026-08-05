@@ -43,21 +43,21 @@ fn prime_zmachine<'a>(
         // Note: zvm.restore panics here; zvm.load_savestate works instead.
     }
 
-    let state = match zvm.step() {
-        Step::ReadLine => { "read_line".to_owned() }
-        Step::ReadChar => { "read_char".to_owned() }
+    let step = match zvm.step() {
+        Step::ReadLine => { "ReadLine".to_owned() }
+        Step::ReadChar => { "ReadChar".to_owned() }
         Step::Save(_) => {
-            panic!("unexpected ZMachine state (Step::Save)")
+            panic!("unexpected ZMachine step (Save)")
         }
         Step::Restore => {
-            panic!("unexpected ZMachine state (Step::Restore)")
+            panic!("unexpected ZMachine step (Restore)")
         }
         Step::Done => {
-            panic!("unexpected ZMachine state (Step::Done)")
+            panic!("unexpected ZMachine step (Done)")
         }
     };
 
-    Ok((state, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
+    Ok((step, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]

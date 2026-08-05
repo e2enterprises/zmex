@@ -35,31 +35,31 @@ defmodule ExzmCli do
           "_save.qz"
       )
 
-    load_story_data = fn ->
+    load_story = fn ->
       case File.read(story_path) do
-        {:ok, story_data} -> story_data
+        {:ok, story} -> story
         _ -> raise "Failed to read story file."
       end
     end
 
-    load_save_data = fn ->
+    load_save = fn ->
       case File.read(save_path) do
-        {:ok, save_data} -> save_data
+        {:ok, save} -> save
         _ -> ""
       end
     end
 
-    {story_data_time, story_data} =
+    {story_time, story} =
       cond do
-        verbose -> :timer.tc(load_story_data, [])
-        true -> {nil, load_story_data.()}
+        verbose -> :timer.tc(load_story, [])
+        true -> {nil, load_story.()}
       end
 
-    {save_data_time, save_data} =
+    {save_time, save} =
       cond do
         reset -> {nil, <<>>}
-        verbose -> :timer.tc(load_save_data, [])
-        true -> {nil, load_save_data.()}
+        verbose -> :timer.tc(load_save, [])
+        true -> {nil, load_save.()}
       end
 
     seed =
@@ -82,41 +82,41 @@ defmodule ExzmCli do
     if verbose do
       IO.puts("\n Diagnostics")
       IO.puts(" -----------")
-      IO.puts("   Story | #{story_path} · #{byte_size(story_data) / 1000}kb")
-      IO.puts("    Save | #{save_path} · #{byte_size(save_data) / 1000}kb")
+      IO.puts("   Story | #{story_path} · #{byte_size(story) / 1000}kb")
+      IO.puts("    Save | #{save_path} · #{byte_size(save) / 1000}kb")
       IO.puts("   Input | #{inspect(input)} · #{String.length(input_str)} chars")
       IO.puts(" Options | #{inspect(reset: reset, help: help, verbose: verbose)}")
     end
 
-    {new_save_data, output, seed, diagnostics} =
+    {new_save, output, seed, diagnostics} =
       cond do
-        !verbose and byte_size(save_data) == 0 ->
-          {new_save_data, output, seed} =
-            Exzm.new_game(story_data, input_str,
+        !verbose and byte_size(save) == 0 ->
+          {new_save, output, seed} =
+            Exzm.new_game(story, input_str,
               seed: seed,
               step_through_blank: true
             )
 
-          {new_save_data, output, seed, nil}
+          {new_save, output, seed, nil}
 
-        !!verbose and byte_size(save_data) == 0 ->
-          Exzm.new_game(story_data, input_str,
+        !!verbose and byte_size(save) == 0 ->
+          Exzm.new_game(story, input_str,
             seed: seed,
             step_through_blank: true,
             diagnostics: true
           )
 
         !verbose ->
-          {new_save_data, output, seed} =
-            Exzm.continue(story_data, save_data, input_str,
+          {new_save, output, seed} =
+            Exzm.continue(story, save, input_str,
               seed: seed,
               step_through_blank: true
             )
 
-          {new_save_data, output, seed, nil}
+          {new_save, output, seed, nil}
 
         !!verbose ->
-          Exzm.continue(story_data, save_data, input_str,
+          Exzm.continue(story, save, input_str,
             seed: seed,
             step_through_blank: true,
             diagnostics: true
@@ -124,12 +124,12 @@ defmodule ExzmCli do
       end
 
     if verbose do
-      IO.puts("    Seed | b64: #{serialize_seed(seed)}")
-      IO.puts("         | raw: #{inspect(seed)}")
-      IO.puts("  Timing | Loading story data     : #{story_data_time / 1000}ms")
+      IO.puts("    Seed | b64 : #{serialize_seed(seed)}")
+      IO.puts("         | raw : #{inspect(seed)}")
+      IO.puts("  Timing | Loading story data           : #{story_time / 1000}ms")
 
       if !reset do
-        IO.puts("         | Loading save data      : #{save_data_time / 1000}ms")
+        IO.puts("         | Loading save data            : #{save_time / 1000}ms")
       end
 
       IO.puts("         | Prime Z-machine NIF call     : #{diagnostics.prime_zmachine_nif_ms}ms")
@@ -149,7 +149,7 @@ defmodule ExzmCli do
       IO.puts("")
     end
 
-    case File.write(save_path, new_save_data) do
+    case File.write(save_path, new_save) do
       :ok -> true
       _ -> raise "Failed to write save data to file."
     end
