@@ -19,11 +19,39 @@ defmodule ExzmCli do
     end
   end
 
-  def main(argv \\ nil) do
+  def loop(argv \\ nil) do
     args =
       OptionParser.parse!(
         argv || System.argv(),
-        switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :count],
+        switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :boolean],
+        aliases: [R: :reset, s: :seed, h: :help, V: :verbose]
+      )
+
+    {options, [story_file | _input]} = args
+
+    input =
+      if Keyword.get(options, :reset, false) do
+        ""
+      else
+        IO.gets("\n\n> ") |> String.trim()
+      end
+
+    new_args = OptionParser.to_argv(options) ++ [story_file, input]
+
+    main(new_args)
+
+    new_args_without_reset = new_args |> List.delete("--reset") |> List.delete("-R")
+
+    loop(new_args_without_reset)
+  end
+
+  def main(argv \\ nil) do
+    argv || System.argv()
+
+    args =
+      OptionParser.parse!(
+        argv,
+        switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :boolean],
         aliases: [R: :reset, s: :seed, h: :help, V: :verbose]
       )
 
@@ -90,6 +118,7 @@ defmodule ExzmCli do
     if verbose do
       IO.puts("\n Diagnostics")
       IO.puts(" -----------")
+      IO.puts("    Args | #{inspect(argv)}")
       IO.puts("   Story | #{story_path} · #{byte_size(story) / 1000}kb")
       IO.puts("    Save | #{save_path} · #{byte_size(save) / 1000}kb")
       IO.puts("   Input | #{inspect(input)} · #{String.length(input_str)} chars")
