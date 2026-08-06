@@ -1,7 +1,7 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def prime_zmachine(_story) do
+  def primer() do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -174,7 +174,7 @@ defmodule Exzm do
 
   defp send_zmachine_input(story, save, input, seed) do
     {save, output, seed} =
-      prime_zmachine_then_send(story, save, input, seed)
+      call_zmachine_nifs(story, save, input, seed)
 
     output = format_output(output)
 
@@ -185,7 +185,7 @@ defmodule Exzm do
     [first_input | rest_inputs] = inputs
 
     {save, first_output, seed} =
-      prime_zmachine_then_send(story, save, first_input, seed)
+      call_zmachine_nifs(story, save, first_input, seed)
 
     {save, rest_output, seed} =
       send_zmachine_inputs(story, save, rest_inputs, seed)
@@ -197,7 +197,7 @@ defmodule Exzm do
 
   defp send_zmachine_input_with_diagnostics(story, save, input, seed) do
     {save, output, seed, diagnostics} =
-      prime_zmachine_then_send_with_diagnostics(story, save, input, seed)
+      call_zmachine_nifs_with_diagnostics(story, save, input, seed)
 
     output = format_output(output)
 
@@ -208,7 +208,7 @@ defmodule Exzm do
     [first_input | rest_inputs] = inputs
 
     {save, first_output, seed, first_diagnostics} =
-      prime_zmachine_then_send_with_diagnostics(story, save, first_input, seed)
+      call_zmachine_nifs_with_diagnostics(story, save, first_input, seed)
 
     {save, rest_output, seed, rest_diagnostics} =
       send_zmachine_inputs_with_diagnostics(story, save, rest_inputs, seed)
@@ -216,14 +216,13 @@ defmodule Exzm do
     output = format_output(first_output <> rest_output)
 
     diagnostics = %{
-      prime_zmachine_nif_ms:
-        first_diagnostics.prime_zmachine_nif_ms + rest_diagnostics.prime_zmachine_nif_ms,
+      primer_nif_ms: first_diagnostics.primer_nif_ms + rest_diagnostics.primer_nif_ms,
       send_input_to_zmachine_nif_ms:
-        first_diagnostics.send_line_to_zmachine_nif_ms +
-          rest_diagnostics.send_line_to_zmachine_nif_ms,
-      send_char_to_zmachine_nif_ms:
-        first_diagnostics.send_char_to_zmachine_nif_ms +
-          rest_diagnostics.send_char_to_zmachine_nif_ms
+        first_diagnostics.send_line_nif_ms +
+          rest_diagnostics.send_line_nif_ms,
+      send_char_nif_ms:
+        first_diagnostics.send_char_nif_ms +
+          rest_diagnostics.send_char_nif_ms
     }
 
     {save, output, seed, diagnostics}
@@ -241,7 +240,7 @@ defmodule Exzm do
     {seed?, 0, 0, 0, 0}
   end
 
-  defp prime_zmachine_then_send(
+  defp call_zmachine_nifs(
          story,
          save,
          input,
@@ -249,7 +248,7 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    EncrustedNif.prime_zmachine(story)
+    EncrustedNif.primer()
 
     {step, seed_a, seed_b, seed_c, seed_d} =
       apply(
@@ -280,7 +279,7 @@ defmodule Exzm do
     {save, output, seed}
   end
 
-  defp prime_zmachine_then_send_with_diagnostics(
+  defp call_zmachine_nifs_with_diagnostics(
          story,
          save,
          input,
@@ -288,9 +287,9 @@ defmodule Exzm do
        ) do
     {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
 
-    {prime_nif_microsec, {}} = :timer.tc(&EncrustedNif.prime_zmachine/1, [story])
+    {prime_nif_microsec, {}} = :timer.tc(&EncrustedNif.primer/0, [])
 
-    {detect_nif_microsec, {step, seed_a, seed_b, seed_c, seed_d}} =
+    {detection_nif_microsec, {step, seed_a, seed_b, seed_c, seed_d}} =
       :timer.tc(
         &EncrustedNif.detect_zmachine_input_type/7,
         [story, save, seed?, seed_a, seed_b, seed_c, seed_d]
@@ -318,18 +317,18 @@ defmodule Exzm do
       case step do
         "ReadLine" ->
           %{
-            prime_zmachine_nif_ms: prime_nif_microsec / 1000,
-            detect_zmachine_nif_ms: detect_nif_microsec / 1000,
-            send_line_to_zmachine_nif_ms: send_nif_microsec / 1000,
-            send_char_to_zmachine_nif_ms: 0
+            primer_nif_ms: prime_nif_microsec / 1000,
+            detection_nif_ms: detection_nif_microsec / 1000,
+            send_line_nif_ms: send_nif_microsec / 1000,
+            send_char_nif_ms: 0
           }
 
         "ReadChar" ->
           %{
-            prime_zmachine_nif_ms: prime_nif_microsec / 1000,
-            detect_zmachine_nif_ms: detect_nif_microsec / 1000,
-            send_line_to_zmachine_nif_ms: 0,
-            send_char_to_zmachine_nif_ms: send_nif_microsec / 1000
+            primer_nif_ms: prime_nif_microsec / 1000,
+            detection_nif_ms: detection_nif_microsec / 1000,
+            send_line_nif_ms: 0,
+            send_char_nif_ms: send_nif_microsec / 1000
           }
 
         unexpected ->

@@ -5,9 +5,8 @@ use encrusted_heart::zscii::ZChar;
 
 use rustler::{Binary, Env, NifResult, OwnedBinary};
 
-#[rustler::nif(schedule = "DirtyCpu")]
-fn prime_zmachine<'a>(story_binary: Binary<'a>) -> NifResult<()> {
-    Zmachine::new(story_binary.to_vec(), BaseUI::new(), Options::default());
+#[rustler::nif]
+fn primer() -> NifResult<()> {
     Ok(())
 }
 
