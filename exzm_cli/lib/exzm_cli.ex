@@ -19,10 +19,10 @@ defmodule ExzmCli do
     end
   end
 
-  def step(argv) do
+  def main(argv \\ nil) do
     args =
       OptionParser.parse!(
-        argv,
+        argv || System.argv(),
         switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :count],
         aliases: [R: :reset, s: :seed, h: :help, V: :verbose]
       )

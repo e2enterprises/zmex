@@ -9,3 +9,11 @@ rust: # play a story using Rust NIF
 test: # run exzm tests
 	cd exzm
 	mix test $(@)
+
+build-elixir-release:
+	cd exzm_cli
+	MIX_ENV=prod mix release --overwrite
+
+elixir-release:
+	cd exzm_cli
+	_build/prod/rel/exzm_cli/bin/exzm_cli eval ExzmCli.main $(@)

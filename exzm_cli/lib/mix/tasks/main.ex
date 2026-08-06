@@ -2,6 +2,6 @@ defmodule Mix.Tasks.Exzm do
   use Mix.Task
 
   def run(argv) do
-    ExzmCli.step(argv)
+    ExzmCli.main(argv)
   end
 end
