@@ -55,10 +55,20 @@ defmodule ExzmTest.Utils do
 
   defp assert_valid_diagnostics(diagnostics?, diagnostics) do
     if diagnostics? do
-      assert is_number(diagnostics.prime_nif_ms)
-      assert diagnostics.prime_nif_ms >= 0
-      assert diagnostics.send_line_nif_ms >= 0
-      assert diagnostics.send_char_nif_ms >= 0
+      for key <- [
+            :seed_nif_ms,
+            :init_nif_ms,
+            :step_1_nif_ms,
+            :step_2_nif_ms,
+            :send_line_nif_ms,
+            :send_char_nif_ms,
+            :output_nif_ms,
+            :save_nif_ms
+          ] do
+        value = Map.get(diagnostics, key)
+        assert is_number(value)
+        assert value >= 0
+      end
     end
   end
 

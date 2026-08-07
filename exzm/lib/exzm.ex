@@ -1,7 +1,7 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def init_zmachine_seed() do
+  def generate_zmachine_random_seed() do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -9,7 +9,7 @@ defmodule Exzm.EncrustedNif do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def prime_zmachine_for_input(_zmachine_resource_arc) do
+  def step_zmachine(_zmachine_resource_arc) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -18,6 +18,10 @@ defmodule Exzm.EncrustedNif do
   end
 
   def send_char_to_zmachine(_zmachine_resource_arc, _input) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def drain_zmachine_output(_zmachine_resource_arc) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -224,7 +228,10 @@ defmodule Exzm do
     output = format_output(first_output <> rest_output)
 
     diagnostics = %{
-      prime_nif_ms: first_diagnostics.prime_nif_ms + rest_diagnostics.prime_nif_ms,
+      step_1_nif_ms: first_diagnostics.step_1_nif_ms + rest_diagnostics.step_1_nif_ms,
+      step_2_nif_ms: first_diagnostics.step_2_nif_ms + rest_diagnostics.step_2_nif_ms,
+      output_nif_ms: first_diagnostics.output_nif_ms + rest_diagnostics.output_nif_ms,
+      save_nif_ms: first_diagnostics.save_nif_ms + rest_diagnostics.save_nif_ms,
       send_input_nif_ms:
         first_diagnostics.send_line_nif_ms +
           rest_diagnostics.send_line_nif_ms,
@@ -245,7 +252,7 @@ defmodule Exzm do
           {seed_a, seed_b, seed_c, seed_d}
 
         _ ->
-          EncrustedNif.init_zmachine_seed()
+          EncrustedNif.generate_zmachine_random_seed()
       end
 
     zmachine =
@@ -254,20 +261,22 @@ defmodule Exzm do
         [story, save, seed_a, seed_b, seed_c, seed_d]
       )
 
-    step = EncrustedNif.prime_zmachine_for_input(zmachine)
+    step = EncrustedNif.step_zmachine(zmachine)
 
-    output =
-      case step do
-        "ReadLine" ->
-          EncrustedNif.send_line_to_zmachine(zmachine, input)
+    case step do
+      "ReadLine" ->
+        EncrustedNif.send_line_to_zmachine(zmachine, input)
 
-        "ReadChar" ->
-          EncrustedNif.send_char_to_zmachine(zmachine, input)
+      "ReadChar" ->
+        EncrustedNif.send_char_to_zmachine(zmachine, input)
 
-        unexpected ->
-          raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
-      end
+      unexpected ->
+        raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
+    end
 
+    EncrustedNif.step_zmachine(zmachine)
+
+    output = EncrustedNif.drain_zmachine_output(zmachine)
     save = EncrustedNif.save_zmachine_state(zmachine)
 
     # Note: Save NIF returns Vec[u8] directly for simplicity,
@@ -288,7 +297,7 @@ defmodule Exzm do
           {0, {seed_a, seed_b, seed_c, seed_d}}
 
         _ ->
-          :timer.tc(&EncrustedNif.init_zmachine_seed/0, [])
+          :timer.tc(&EncrustedNif.generate_zmachine_random_seed/0, [])
       end
 
     {init_nif_microsec, zmachine} =
@@ -297,10 +306,10 @@ defmodule Exzm do
         [story, save, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {prime_nif_microsec, step} =
-      :timer.tc(&EncrustedNif.prime_zmachine_for_input/1, [zmachine])
+    {step_1_nif_microsec, step} =
+      :timer.tc(&EncrustedNif.step_zmachine/1, [zmachine])
 
-    {send_nif_microsec, output} =
+    {send_nif_microsec, {}} =
       case step do
         "ReadLine" ->
           :timer.tc(&EncrustedNif.send_line_to_zmachine/2, [zmachine, input])
@@ -312,6 +321,12 @@ defmodule Exzm do
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
 
+    {step_2_nif_microsec, _step} =
+      :timer.tc(&EncrustedNif.step_zmachine/1, [zmachine])
+
+    {output_nif_microsec, output} =
+      :timer.tc(&EncrustedNif.drain_zmachine_output/1, [zmachine])
+
     {save_nif_microsec, save} =
       :timer.tc(&EncrustedNif.save_zmachine_state/1, [zmachine])
 
@@ -322,10 +337,12 @@ defmodule Exzm do
     diagnostics = %{
       seed_nif_ms: seed_nif_microsec / 1000,
       init_nif_ms: init_nif_microsec / 1000,
-      prime_nif_ms: prime_nif_microsec / 1000,
-      save_nif_ms: save_nif_microsec / 1000,
+      step_1_nif_ms: step_1_nif_microsec / 1000,
       send_line_nif_ms: 0,
-      send_char_nif_ms: 0
+      send_char_nif_ms: 0,
+      step_2_nif_ms: step_2_nif_microsec / 1000,
+      output_nif_ms: output_nif_microsec / 1000,
+      save_nif_ms: save_nif_microsec / 1000
     }
 
     diagnostics =
