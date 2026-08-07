@@ -1,19 +1,27 @@
 defmodule Exzm.EncrustedNif do
   use Rustler, otp_app: :exzm, crate: "encrusted_nif"
 
-  def primer() do
+  def init_zmachine_seed() do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def detect_zmachine_input_type(_story, _save, _seed?, _seed_a, _seed_b, _seed_c, _seed_d) do
+  def init_zmachine(_story, _save, _seed_a, _seed_b, _seed_c, _seed_d) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def send_line_to_zmachine(_story, _save, _input, _seed?, _seed_a, _seed_b, _seed_c, _seed_d) do
+  def prime_zmachine_for_input(_zmachine_resource_arc) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def send_char_to_zmachine(_story, _save, _input, _seed?, _seed_a, _seed_b, _seed_c, _seed_d) do
+  def send_line_to_zmachine(_zmachine_resource_arc, _input) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def send_char_to_zmachine(_zmachine_resource_arc, _input) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
+  def save_zmachine_state(_zmachine_resource_arc) do
     :erlang.nif_error(:nif_not_loaded)
   end
 end
@@ -216,7 +224,7 @@ defmodule Exzm do
     output = format_output(first_output <> rest_output)
 
     diagnostics = %{
-      primer_nif_ms: first_diagnostics.primer_nif_ms + rest_diagnostics.primer_nif_ms,
+      prime_nif_ms: first_diagnostics.prime_nif_ms + rest_diagnostics.prime_nif_ms,
       send_input_nif_ms:
         first_diagnostics.send_line_nif_ms +
           rest_diagnostics.send_line_nif_ms,
@@ -228,108 +236,105 @@ defmodule Exzm do
     {save, output, seed, diagnostics}
   end
 
-  defp prepare_seed_args({seed_a, seed_b, seed_c, seed_d})
-       when is_integer(seed_a) and is_integer(seed_b) and is_integer(seed_c) and
-              is_integer(seed_d) do
-    seed? = true
-    {seed?, seed_a, seed_b, seed_c, seed_d}
-  end
+  defp call_zmachine_nifs(story, save, input, seed) do
+    {seed_a, seed_b, seed_c, seed_d} =
+      case seed do
+        {seed_a, seed_b, seed_c, seed_d}
+        when is_integer(seed_a) and is_integer(seed_b) and is_integer(seed_c) and
+               is_integer(seed_d) ->
+          {seed_a, seed_b, seed_c, seed_d}
 
-  defp prepare_seed_args(nil) do
-    seed? = false
-    {seed?, 0, 0, 0, 0}
-  end
+        _ ->
+          EncrustedNif.init_zmachine_seed()
+      end
 
-  defp call_zmachine_nifs(
-         story,
-         save,
-         input,
-         seed
-       ) do
-    {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
-
-    EncrustedNif.primer()
-
-    {step, seed_a, seed_b, seed_c, seed_d} =
+    zmachine =
       apply(
-        &EncrustedNif.detect_zmachine_input_type/7,
-        [story, save, seed?, seed_a, seed_b, seed_c, seed_d]
+        &EncrustedNif.init_zmachine/6,
+        [story, save, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {save, output, seed_a, seed_b, seed_c, seed_d} =
+    step = EncrustedNif.prime_zmachine_for_input(zmachine)
+
+    output =
       case step do
         "ReadLine" ->
-          apply(
-            &EncrustedNif.send_line_to_zmachine/8,
-            [story, save, input, seed?, seed_a, seed_b, seed_c, seed_d]
-          )
+          EncrustedNif.send_line_to_zmachine(zmachine, input)
 
         "ReadChar" ->
-          apply(
-            &EncrustedNif.send_char_to_zmachine/8,
-            [story, save, input, seed?, seed_a, seed_b, seed_c, seed_d]
-          )
+          EncrustedNif.send_char_to_zmachine(zmachine, input)
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
+
+    save = EncrustedNif.save_zmachine_state(zmachine)
+
+    # Note: Save NIF returns Vec[u8] directly for simplicity,
+    # so we need to convert from list to Elixir binary here:
+    save = :binary.list_to_bin(save)
 
     seed = {seed_a, seed_b, seed_c, seed_d}
 
     {save, output, seed}
   end
 
-  defp call_zmachine_nifs_with_diagnostics(
-         story,
-         save,
-         input,
-         seed
-       ) do
-    {seed?, seed_a, seed_b, seed_c, seed_d} = prepare_seed_args(seed)
+  defp call_zmachine_nifs_with_diagnostics(story, save, input, seed) do
+    {seed_nif_microsec, {seed_a, seed_b, seed_c, seed_d}} =
+      case seed do
+        {seed_a, seed_b, seed_c, seed_d}
+        when is_integer(seed_a) and is_integer(seed_b) and is_integer(seed_c) and
+               is_integer(seed_d) ->
+          {0, {seed_a, seed_b, seed_c, seed_d}}
 
-    {prime_nif_microsec, {}} = :timer.tc(&EncrustedNif.primer/0, [])
+        _ ->
+          :timer.tc(&EncrustedNif.init_zmachine_seed/0, [])
+      end
 
-    {detection_nif_microsec, {step, seed_a, seed_b, seed_c, seed_d}} =
+    {init_nif_microsec, zmachine} =
       :timer.tc(
-        &EncrustedNif.detect_zmachine_input_type/7,
-        [story, save, seed?, seed_a, seed_b, seed_c, seed_d]
+        &EncrustedNif.init_zmachine/6,
+        [story, save, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {send_nif_microsec, {save, output, seed_a, seed_b, seed_c, seed_d}} =
+    {prime_nif_microsec, step} =
+      :timer.tc(&EncrustedNif.prime_zmachine_for_input/1, [zmachine])
+
+    {send_nif_microsec, output} =
       case step do
         "ReadLine" ->
-          :timer.tc(
-            &EncrustedNif.send_line_to_zmachine/8,
-            [story, save, input, seed?, seed_a, seed_b, seed_c, seed_d]
-          )
+          :timer.tc(&EncrustedNif.send_line_to_zmachine/2, [zmachine, input])
 
         "ReadChar" ->
-          :timer.tc(
-            &EncrustedNif.send_char_to_zmachine/8,
-            [story, save, input, seed?, seed_a, seed_b, seed_c, seed_d]
-          )
+          :timer.tc(&EncrustedNif.send_char_to_zmachine/2, [zmachine, input])
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
 
+    {save_nif_microsec, save} =
+      :timer.tc(&EncrustedNif.save_zmachine_state/1, [zmachine])
+
+    # Note: Save NIF returns Vec[u8] directly for simplicity,
+    # so we need to convert from list to Elixir binary here:
+    save = :binary.list_to_bin(save)
+
+    diagnostics = %{
+      seed_nif_ms: seed_nif_microsec / 1000,
+      init_nif_ms: init_nif_microsec / 1000,
+      prime_nif_ms: prime_nif_microsec / 1000,
+      save_nif_ms: save_nif_microsec / 1000,
+      send_line_nif_ms: 0,
+      send_char_nif_ms: 0
+    }
+
     diagnostics =
       case step do
         "ReadLine" ->
-          %{
-            primer_nif_ms: prime_nif_microsec / 1000,
-            detection_nif_ms: detection_nif_microsec / 1000,
-            send_line_nif_ms: send_nif_microsec / 1000,
-            send_char_nif_ms: 0
-          }
+          %{diagnostics | send_line_nif_ms: send_nif_microsec / 1000}
 
         "ReadChar" ->
-          %{
-            primer_nif_ms: prime_nif_microsec / 1000,
-            detection_nif_ms: detection_nif_microsec / 1000,
-            send_line_nif_ms: 0,
-            send_char_nif_ms: send_nif_microsec / 1000
-          }
+          %{diagnostics | send_char_nif_ms: send_nif_microsec / 1000}
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")

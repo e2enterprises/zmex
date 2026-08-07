@@ -55,8 +55,8 @@ defmodule ExzmTest.Utils do
 
   defp assert_valid_diagnostics(diagnostics?, diagnostics) do
     if diagnostics? do
-      assert is_number(diagnostics.primer_nif_ms)
-      assert diagnostics.primer_nif_ms >= 0
+      assert is_number(diagnostics.prime_nif_ms)
+      assert diagnostics.prime_nif_ms >= 0
       assert diagnostics.send_line_nif_ms >= 0
       assert diagnostics.send_char_nif_ms >= 0
     end

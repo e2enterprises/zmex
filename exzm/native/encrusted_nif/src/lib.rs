@@ -1,54 +1,62 @@
+use std::sync::Mutex;
+
 use encrusted_heart::options::Options;
 use encrusted_heart::traits::{BaseOutput, BaseUI};
 use encrusted_heart::zmachine::{Step, Zmachine};
-use encrusted_heart::zscii::ZChar;
+use encrusted_heart::zscii::{ZChar, DEFAULT_UNICODE_TABLE};
 
-use rustler::{Binary, Env, NifResult, OwnedBinary};
+use rustler::Resource;
+use rustler::{Binary, NifResult, ResourceArc};
+
+// pub struct ZmachineResourceInner {
+//     zmachine: Zmachine<BaseUI>
+// }
+
+pub struct ZmachineResource {
+    inner: Mutex<Zmachine<BaseUI>>,
+}
+
+#[rustler::resource_impl]
+impl Resource for ZmachineResource {}
 
 #[rustler::nif]
-fn primer() -> NifResult<()> {
-    Ok(())
+fn init_zmachine_seed() -> NifResult<(i32, i32, i32, i32)> {
+    Ok((rand::random(), rand::random(), rand::random(), rand::random()))
 }
 
 #[rustler::nif]
-fn detect_zmachine_input_type<'a>(
+fn init_zmachine<'a>(
     story_binary: Binary<'a>,
     save_binary: Binary<'a>,
-    seed: bool,
     seed_a: i32,
     seed_b: i32,
     seed_c: i32,
     seed_d: i32,
-) -> NifResult<(String, i32, i32, i32, i32)> {
+) -> ResourceArc<ZmachineResource> {
     let mut opts = Options::default();
+    opts.rand_seed = [
+        // convert 32-bit signed ints from Elixir to Rust unsigned 32-bit ints:
+        (seed_a + i32::MAX) as u32,
+        (seed_b + i32::MAX) as u32,
+        (seed_c + i32::MAX) as u32,
+        (seed_d + i32::MAX) as u32,
+    ];
 
-    let mut seed_a_i32: i32 = seed_a;
-    let mut seed_b_i32: i32 = seed_b;
-    let mut seed_c_i32: i32 = seed_c;
-    let mut seed_d_i32: i32 = seed_d;
-
-    if seed {
-        let seed_a_u32: u32 = (seed_a_i32 + i32::MAX) as u32;
-        let seed_b_u32: u32 = (seed_b_i32 + i32::MAX) as u32;
-        let seed_c_u32: u32 = (seed_c_i32 + i32::MAX) as u32;
-        let seed_d_u32: u32 = (seed_d_i32 + i32::MAX) as u32;
-        opts.rand_seed = [seed_a_u32, seed_b_u32, seed_c_u32, seed_d_u32];
-    } else {
-        opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
-        seed_a_i32 = (opts.rand_seed[0] - i32::MAX as u32) as i32;
-        seed_b_i32 = (opts.rand_seed[1] - i32::MAX as u32) as i32;
-        seed_c_i32 = (opts.rand_seed[2] - i32::MAX as u32) as i32;
-        seed_d_i32 = (opts.rand_seed[3] - i32::MAX as u32) as i32;
-    }
-
-    let mut zvm = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
+    let mut zmachine = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
 
     if save_binary.len() > 0 {
-        zvm.load_savestate(&save_binary);
-        // Note: zvm.restore panics here; zvm.load_savestate works instead.
+        zmachine.load_savestate(&save_binary);
+        // Note: zmachine.restore panics here; zmachine.load_savestate works instead.
     }
 
-    let step = match zvm.step() {
+    ZmachineResource { inner: Mutex::new(zmachine) }.into()
+}
+
+#[rustler::nif]
+fn prime_zmachine_for_input(arc: ResourceArc<ZmachineResource>) -> String {
+    let mut zmachine = arc.inner.lock().unwrap();
+
+    let step = match zmachine.step() {
         Step::ReadLine => { "ReadLine".to_owned() }
         Step::ReadChar => { "ReadChar".to_owned() }
         Step::Save(_) => {
@@ -62,153 +70,76 @@ fn detect_zmachine_input_type<'a>(
         }
     };
 
-    Ok((step, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
+    step
 }
 
 #[rustler::nif]
-fn send_line_to_zmachine<'a>(
-    env: Env<'a>,
-    story_binary: Binary<'a>,
-    save_binary: Binary<'a>,
-    input: String,
-    seed: bool,
-    seed_a: i32,
-    seed_b: i32,
-    seed_c: i32,
-    seed_d: i32,
-) -> NifResult<(Binary<'a>, String, i32, i32, i32, i32)> {
-    let mut opts = Options::default();
+fn send_line_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> String {
+    let mut zmachine = arc.inner.lock().unwrap();
 
-    let mut seed_a_i32: i32 = seed_a;
-    let mut seed_b_i32: i32 = seed_b;
-    let mut seed_c_i32: i32 = seed_c;
-    let mut seed_d_i32: i32 = seed_d;
-
-    if seed {
-        let seed_a_u32: u32 = (seed_a_i32 + i32::MAX) as u32;
-        let seed_b_u32: u32 = (seed_b_i32 + i32::MAX) as u32;
-        let seed_c_u32: u32 = (seed_c_i32 + i32::MAX) as u32;
-        let seed_d_u32: u32 = (seed_d_i32 + i32::MAX) as u32;
-        opts.rand_seed = [seed_a_u32, seed_b_u32, seed_c_u32, seed_d_u32];
-    } else {
-        opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
-        seed_a_i32 = (opts.rand_seed[0] - i32::MAX as u32) as i32;
-        seed_b_i32 = (opts.rand_seed[1] - i32::MAX as u32) as i32;
-        seed_c_i32 = (opts.rand_seed[2] - i32::MAX as u32) as i32;
-        seed_d_i32 = (opts.rand_seed[3] - i32::MAX as u32) as i32;
-    }
-
-    let mut zvm = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
-
-    if save_binary.len() > 0 {
-        zvm.load_savestate(&save_binary);
-        // Note: zvm.restore panics here; zvm.load_savestate works instead.
-    }
-
-    // No matter where save occurred, always need to step before sending input to zvm:
-    zvm.step();
-
-    zvm.handle_input(input);
-
-    zvm.step();
+    zmachine.handle_input(input);
+    zmachine.step();
 
     let mut output = String::new();
     for BaseOutput {
         style: _,
         content,
-    } in zvm.ui.drain_output()
+    } in zmachine.ui.drain_output()
     {
         output.push_str(&content);
     }
 
-    let save_bytes = zvm.get_save();
-
-    // Must convert from OwnedBinary to Binary to return within tuple. References:
-    // https://forum.elixirforum.com/t/return-a-binary-tuple-from-a-rust-nif/58528
-    // https://docs.rs/rustler/latest/rustler/types/binary/index.html
-    let mut owned_binary: OwnedBinary = OwnedBinary::new(save_bytes.len()).unwrap();
-    owned_binary.as_mut_slice().copy_from_slice(&save_bytes);
-    let save_binary = Binary::from_owned(owned_binary, env);
-
-    Ok((save_binary, output, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
+    output
 }
 
-#[rustler::nif(schedule = "DirtyCpu")]
-fn send_char_to_zmachine<'a>(
-    env: Env<'a>,
-    story_binary: Binary<'a>,
-    save_binary: Binary<'a>,
-    input: String,
-    seed: bool,
-    seed_a: i32,
-    seed_b: i32,
-    seed_c: i32,
-    seed_d: i32,
-) -> NifResult<(Binary<'a>, String, i32, i32, i32, i32)> {
-    let mut opts = Options::default();
+#[rustler::nif]
+fn send_char_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> String {
+    let mut zmachine = arc.inner.lock().unwrap();
 
-    let mut seed_a_i32: i32 = seed_a;
-    let mut seed_b_i32: i32 = seed_b;
-    let mut seed_c_i32: i32 = seed_c;
-    let mut seed_d_i32: i32 = seed_d;
-
-    if seed {
-        let seed_a_u32: u32 = (seed_a_i32 + i32::MAX) as u32;
-        let seed_b_u32: u32 = (seed_b_i32 + i32::MAX) as u32;
-        let seed_c_u32: u32 = (seed_c_i32 + i32::MAX) as u32;
-        let seed_d_u32: u32 = (seed_d_i32 + i32::MAX) as u32;
-        opts.rand_seed = [seed_a_u32, seed_b_u32, seed_c_u32, seed_d_u32];
-    } else {
-        opts.rand_seed = [rand::random(), rand::random(), rand::random(), rand::random()];
-        seed_a_i32 = (opts.rand_seed[0] - i32::MAX as u32) as i32;
-        seed_b_i32 = (opts.rand_seed[1] - i32::MAX as u32) as i32;
-        seed_c_i32 = (opts.rand_seed[2] - i32::MAX as u32) as i32;
-        seed_d_i32 = (opts.rand_seed[3] - i32::MAX as u32) as i32;
-    }
-
-    let mut zvm = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
-
-    if save_binary.len() > 0 {
-        zvm.load_savestate(&save_binary);
-        // Note: zvm.restore panics here; zvm.load_savestate works instead.
-    }
-
-    // No matter where save occurred, always need to step before sending input to zvm:
-    zvm.step();
-
-    zvm.handle_read_char(
+    zmachine.handle_read_char(
         ZChar::from_char(
             if input.chars().count() == 0 {
                 ' ' // If there is no input, just send a blank string.
             } else {
                 input.chars().next().unwrap()
             },
-            zvm.unicode_table(),
+            DEFAULT_UNICODE_TABLE,
         )
         .unwrap(),
     );
 
-    zvm.step();
+    zmachine.step();
 
     let mut output = String::new();
     for BaseOutput {
         style: _,
         content,
-    } in zvm.ui.drain_output()
+    } in zmachine.ui.drain_output()
     {
         output.push_str(&content);
     }
 
-    let save_bytes = zvm.get_save();
-
-    // Must convert from OwnedBinary to Binary to return within tuple. References:
-    // https://forum.elixirforum.com/t/return-a-binary-tuple-from-a-rust-nif/58528
-    // https://docs.rs/rustler/latest/rustler/types/binary/index.html
-    let mut owned_binary: OwnedBinary = OwnedBinary::new(save_bytes.len()).unwrap();
-    owned_binary.as_mut_slice().copy_from_slice(&save_bytes);
-    let save_binary = Binary::from_owned(owned_binary, env);
-
-    Ok((save_binary, output, seed_a_i32, seed_b_i32, seed_c_i32, seed_d_i32))
+    output
 }
+
+#[rustler::nif]
+fn save_zmachine_state(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
+    let zmachine = arc.inner.lock().unwrap();
+    zmachine.get_save()
+}
+// Note:
+// Must convert from OwnedBinary to Binary to return within tuple. References:
+// https://forum.elixirforum.com/t/return-a-binary-tuple-from-a-rust-nif/58528
+// https://docs.rs/rustler/latest/rustler/types/binary/index.html
+//
+// use rustler::{Binary, Env, Term, NifResult, OwnedBinary};
+//
+// OwnedBinary::new(save_bytes.len()).unwrap();
+// owned_binary.as_mut_slice().copy_from_slice(&save_bytes);
+// let save_binary = Binary::from_owned(owned_binary, env);
+//
+// Ok((save_binary, ...other values...))
+//
+// (Return type -> NifResult<(Binary<'a>, String, i32, ...etc...)>)
 
 rustler::init!("Elixir.Exzm.EncrustedNif");

@@ -169,12 +169,14 @@ defmodule ExzmCli do
         IO.puts("         | Loading save data            : #{save_time / 1000}ms")
       end
 
-      IO.puts(
-        "         | Primer NIF call              : #{format_nif_ms(diagnostics.primer_nif_ms)}"
-      )
+      if diagnostics.send_line_nif_ms > 0 do
+        IO.puts(
+          "         | Compute seed NIF call        : #{format_nif_ms(diagnostics.seed_nif_ms)}"
+        )
+      end
 
       IO.puts(
-        "         | Detection Z-machine NIF call : #{format_nif_ms(diagnostics.detection_nif_ms)}"
+        "         | Prime Z-machine NIF call     : #{format_nif_ms(diagnostics.prime_nif_ms)}"
       )
 
       if diagnostics.send_line_nif_ms > 0 do
