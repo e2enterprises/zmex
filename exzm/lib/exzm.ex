@@ -217,7 +217,7 @@ defmodule Exzm do
 
     diagnostics = %{
       primer_nif_ms: first_diagnostics.primer_nif_ms + rest_diagnostics.primer_nif_ms,
-      send_input_to_zmachine_nif_ms:
+      send_input_nif_ms:
         first_diagnostics.send_line_nif_ms +
           rest_diagnostics.send_line_nif_ms,
       send_char_nif_ms:
