@@ -13,11 +13,15 @@ defmodule Exzm.EncrustedNif do
     :erlang.nif_error(:nif_not_loaded)
   end
 
+  def compute_zmachine_unicode_table(_zmachine_resource_arc) do
+    :erlang.nif_error(:nif_not_loaded)
+  end
+
   def send_line_to_zmachine(_zmachine_resource_arc, _input) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def send_char_to_zmachine(_zmachine_resource_arc, _input) do
+  def send_char_to_zmachine(_zmachine_resource_arc, _input, _unicode_table) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -268,7 +272,8 @@ defmodule Exzm do
         EncrustedNif.send_line_to_zmachine(zmachine, input)
 
       "ReadChar" ->
-        EncrustedNif.send_char_to_zmachine(zmachine, input)
+        unicode_table = EncrustedNif.compute_zmachine_unicode_table(zmachine)
+        EncrustedNif.send_char_to_zmachine(zmachine, input, unicode_table)
 
       unexpected ->
         raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
@@ -309,13 +314,25 @@ defmodule Exzm do
     {step_1_nif_microsec, step} =
       :timer.tc(&EncrustedNif.step_zmachine/1, [zmachine])
 
-    {send_nif_microsec, {}} =
+    {send_nif_microsec, unicode_table_nif_microsec, {}} =
       case step do
         "ReadLine" ->
-          :timer.tc(&EncrustedNif.send_line_to_zmachine/2, [zmachine, input])
+          {send_nif_microsec, {}} =
+            :timer.tc(&EncrustedNif.send_line_to_zmachine/2, [zmachine, input])
+
+          {send_nif_microsec, 0, {}}
 
         "ReadChar" ->
-          :timer.tc(&EncrustedNif.send_char_to_zmachine/2, [zmachine, input])
+          {unicode_table_nif_microsec, unicode_table} =
+            :timer.tc(&EncrustedNif.compute_zmachine_unicode_table/1, [zmachine])
+
+          {send_nif_microsec, {}} =
+            :timer.tc(
+              &EncrustedNif.send_char_to_zmachine/3,
+              [zmachine, input, unicode_table]
+            )
+
+          {send_nif_microsec, unicode_table_nif_microsec, {}}
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
@@ -340,6 +357,7 @@ defmodule Exzm do
       step_1_nif_ms: step_1_nif_microsec / 1000,
       send_line_nif_ms: 0,
       send_char_nif_ms: 0,
+      unicode_table_nif_ms: 0,
       step_2_nif_ms: step_2_nif_microsec / 1000,
       output_nif_ms: output_nif_microsec / 1000,
       save_nif_ms: save_nif_microsec / 1000
@@ -351,7 +369,11 @@ defmodule Exzm do
           %{diagnostics | send_line_nif_ms: send_nif_microsec / 1000}
 
         "ReadChar" ->
-          %{diagnostics | send_char_nif_ms: send_nif_microsec / 1000}
+          %{
+            diagnostics
+            | send_char_nif_ms: send_nif_microsec / 1000,
+              unicode_table_nif_ms: unicode_table_nif_microsec / 1000
+          }
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")

@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use encrusted_heart::options::Options;
 use encrusted_heart::traits::{BaseOutput, BaseUI};
 use encrusted_heart::zmachine::{Step, Zmachine};
-use encrusted_heart::zscii::{ZChar, DEFAULT_UNICODE_TABLE};
+use encrusted_heart::zscii::ZChar;
 
 use rustler::Resource;
 use rustler::{Binary, NifResult, ResourceArc};
@@ -13,7 +13,7 @@ use rustler::{Binary, NifResult, ResourceArc};
 // Rustler test_resource.rs is the best reference for up-to-date Resource patterns:
 // https://github.com/rusterlium/rustler/blob/master/rustler_tests/native/rustler_test/src/test_resource.rs
 pub struct ZmachineResource {
-    inner: Mutex<Zmachine<BaseUI>>,
+    zmachine_mutex: Mutex<Zmachine<BaseUI>>,
 }
 // ZmachineResource must implement Resource trait from Rustler.
 #[rustler::resource_impl]
@@ -21,6 +21,12 @@ impl Resource for ZmachineResource {
     // No teardown ops needed currently; add "down" method here if needed in future, eg.
     // https://github.com/rusterlium/rustler/blob/master/rustler_tests/native/rustler_test/src/test_resource.rs#L22
 }
+
+pub struct ZmachineUnicodeTableResource {
+    unicode_table: Vec<char>,
+}
+#[rustler::resource_impl]
+impl Resource for ZmachineUnicodeTableResource {}
 
 #[rustler::nif]
 fn generate_zmachine_random_seed() -> NifResult<(i32, i32, i32, i32)> {
@@ -32,6 +38,7 @@ fn generate_zmachine_random_seed() -> NifResult<(i32, i32, i32, i32)> {
     ))
 }
 
+/// Creates a _mutable_ NIF resource containing a full Z-machine instance.
 #[rustler::nif]
 fn init_zmachine<'a>(
     story_binary: Binary<'a>,
@@ -59,14 +66,14 @@ fn init_zmachine<'a>(
     }
 
     ZmachineResource {
-        inner: Mutex::new(zmachine),
+        zmachine_mutex: Mutex::new(zmachine),
     }
     .into()
 }
 
 #[rustler::nif]
 fn step_zmachine(arc: ResourceArc<ZmachineResource>) -> String {
-    let mut zmachine = arc.inner.lock().unwrap();
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
 
     let step = match zmachine.step() {
         Step::ReadLine => "ReadLine".to_owned(),
@@ -80,17 +87,37 @@ fn step_zmachine(arc: ResourceArc<ZmachineResource>) -> String {
 }
 
 #[rustler::nif]
-fn send_line_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> NifResult<()> {
-    let mut zmachine = arc.inner.lock().unwrap();
+fn send_line_to_zmachine(
+    arc: ResourceArc<ZmachineResource>,
+    input: String,
+) -> NifResult<()> {
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
 
     zmachine.handle_input(input);
 
     Ok(())
 }
 
+/// Creates an _immutable_ NIF resource containing a full Z-machine instance.
 #[rustler::nif]
-fn send_char_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> NifResult<()> {
-    let mut zmachine = arc.inner.lock().unwrap();
+fn compute_zmachine_unicode_table(
+    arc: ResourceArc<ZmachineResource>,
+) -> ResourceArc<ZmachineUnicodeTableResource> {
+    let zmachine = arc.zmachine_mutex.lock().unwrap();
+
+    ZmachineUnicodeTableResource {
+        unicode_table: zmachine.unicode_table().to_vec()
+    }.into()
+}
+
+#[rustler::nif]
+fn send_char_to_zmachine(
+    zmachine_arc: ResourceArc<ZmachineResource>,
+    input: String,
+    unicode_table_arc: ResourceArc<ZmachineUnicodeTableResource>,
+) -> NifResult<()> {
+    let mut zmachine = zmachine_arc.zmachine_mutex.lock().unwrap();
+    let unicode_table = &unicode_table_arc.unicode_table;
 
     zmachine.handle_read_char(
         ZChar::from_char(
@@ -99,7 +126,7 @@ fn send_char_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> N
             } else {
                 input.chars().next().unwrap()
             },
-            DEFAULT_UNICODE_TABLE,
+            unicode_table,
         )
         .unwrap(),
     );
@@ -109,7 +136,7 @@ fn send_char_to_zmachine(arc: ResourceArc<ZmachineResource>, input: String) -> N
 
 #[rustler::nif]
 fn drain_zmachine_output(arc: ResourceArc<ZmachineResource>) -> String {
-    let mut zmachine = arc.inner.lock().unwrap();
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
     let mut output = String::new();
 
     for BaseOutput { style: _, content } in zmachine.ui.drain_output() {
@@ -121,7 +148,7 @@ fn drain_zmachine_output(arc: ResourceArc<ZmachineResource>) -> String {
 
 #[rustler::nif]
 fn save_zmachine_state(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
-    let zmachine = arc.inner.lock().unwrap();
+    let zmachine = arc.zmachine_mutex.lock().unwrap();
     let save_binary = zmachine.get_save();
 
     save_binary
@@ -146,7 +173,7 @@ fn save_zmachine_state(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
     //     env: Env<'a>,
     //     arc: ResourceArc<ZmachineResource>,
     // } -> NifResult<( Binary<'a>, ...other values...)> {
-    //     let zmachine = arc.inner.lock().unwrap();
+    //     let zmachine = arc.zmachine_mutex.lock().unwrap();
     //     let save_binary = zmachine.get_save()
     //
     //     OwnedBinary::new(save_bytes.len()).unwrap();
