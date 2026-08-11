@@ -3,7 +3,7 @@ defmodule ExzmTest do
   alias ExzmTest.Utils
   doctest Exzm
 
-  test "starts new games and continues them sucessfully" do
+  test "[single-input] starts new games and continues them sucessfully" do
     Utils.play_adventure()
     Utils.play_anchorhead()
     Utils.play_anchorhead()
@@ -11,7 +11,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead()
   end
 
-  test ":step_through_blank option works as expected" do
+  test "[single-input] :step_through_blank option works as expected" do
     Utils.play_adventure(step_through_blank: true)
     Utils.play_anchorhead(step_through_blank: true)
     Utils.play_anchorhead(step_through_blank: true)
@@ -19,7 +19,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead(step_through_blank: true)
   end
 
-  test ":diagnostics option works as expected" do
+  test "[single-input] :diagnostics option works as expected" do
     Utils.play_adventure(diagnostics: true)
     Utils.play_anchorhead(diagnostics: true)
     Utils.play_anchorhead(diagnostics: true)
@@ -27,7 +27,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead(diagnostics: true)
   end
 
-  test "all options set together work as expected" do
+  test "[single-input] all options set together work as expected" do
     Utils.play_adventure(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
@@ -35,7 +35,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
   end
 
-  test "starts new games and continues them sucessfully (multi-input)" do
+  test " [multi-input] starts new games and continues them sucessfully" do
     Utils.play_adventure_multiple_inputs()
     Utils.play_anchorhead_multiple_inputs()
     Utils.play_anchorhead_multiple_inputs()
@@ -43,7 +43,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead_multiple_inputs()
   end
 
-  test ":step_through_blank option works as expected (multi-input)" do
+  test " [multi-input] :step_through_blank option works as expected" do
     Utils.play_adventure_multiple_inputs(step_through_blank: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
@@ -51,7 +51,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
   end
 
-  test ":diagnostics option works as expected (multi-input)" do
+  test " [multi-input] :diagnostics option works as expected" do
     Utils.play_adventure_multiple_inputs(diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
@@ -59,7 +59,7 @@ defmodule ExzmTest do
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
   end
 
-  test "all options set together work as expected (multi-input)" do
+  test " [multi-input] all options set together work as expected" do
     Utils.play_adventure_multiple_inputs(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true, diagnostics: true)
@@ -292,16 +292,14 @@ defmodule ExzmTest.Utils do
   def play_anchorhead_multiple_inputs(opts \\ []) do
     story = load_story("anchor.z8")
     diagnostics? = Keyword.get(opts, :diagnostics)
-    _expect_blank_step? = !Keyword.get(opts, :step_through_blank)
+    expect_blank_step? = !Keyword.get(opts, :step_through_blank)
 
-    inputs = ["", "", "n", "north", "E"]
-    # TODO: Make multi-input functionality work with :step_through_blank option.
-    # inputs =
-    #   if expect_blank_step? do
-    #     ["", "", "n", "north", "E"]
-    #   else
-    #     ["", "n", "north", "E"]
-    #   end
+    inputs =
+      if expect_blank_step? do
+        ["", "", "n", "north", "E"]
+      else
+        ["", "n", "north", "E"]
+      end
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Exzm.new_game(story, inputs, opts))

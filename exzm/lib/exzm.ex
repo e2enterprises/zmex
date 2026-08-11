@@ -38,8 +38,8 @@ defmodule Exzm do
   alias Exzm.EncrustedNif
 
   # Suppress incorrect Dialyzer warnings due to NIF calls:
-  @dialyzer {:no_return, send_zmachine_inputs: 4}
-  @dialyzer {:no_return, send_zmachine_inputs_with_diagnostics: 4}
+  @dialyzer {:no_return, send_zmachine_inputs: 5}
+  @dialyzer {:no_return, send_zmachine_inputs_with_diagnostics: 5}
 
   # Parameters
   # ----------
@@ -85,27 +85,18 @@ defmodule Exzm do
 
     {save, output, seed, diagnostics} =
       if diagnostics? do
-        send_zmachine_input_with_diagnostics(story, <<>>, input, seed)
+        send_zmachine_input_with_diagnostics(story, <<>>, input, seed, step_through_blank?)
       else
         {save, output, seed} =
-          send_zmachine_input(story, <<>>, input, seed)
+          send_zmachine_input(story, <<>>, input, seed, step_through_blank?)
 
         {save, output, seed, nil}
       end
 
-    # If output is blank and :step_through_blank specified, take another ZVM step:
-    if step_through_blank? and String.length(output) == 0 do
-      continue(story, save, " ",
-        seed: seed,
-        step_through_blank: step_through_blank?,
-        diagnostics: diagnostics?
-      )
+    if diagnostics? do
+      {save, output, seed, diagnostics}
     else
-      if diagnostics? do
-        {save, output, seed, diagnostics}
-      else
-        {save, output, seed}
-      end
+      {save, output, seed}
     end
   end
 
@@ -113,16 +104,16 @@ defmodule Exzm do
   def new_game(story, [first_input | rest_inputs], opts)
       when is_binary(story) and byte_size(story) > 0 do
     {seed, opts} = Keyword.pop(opts, :seed, nil)
-    {_step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
+    {step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
     {diagnostics?, opts} = Keyword.pop(opts, :diagnostics, false)
     if !Enum.empty?(opts), do: raise(ArgumentError, "invalid opts #{inspect(opts)}")
 
     inputs = [first_input | rest_inputs]
 
     if diagnostics? do
-      send_zmachine_inputs_with_diagnostics(story, <<>>, inputs, seed)
+      send_zmachine_inputs_with_diagnostics(story, <<>>, inputs, seed, step_through_blank?)
     else
-      send_zmachine_inputs(story, <<>>, inputs, seed)
+      send_zmachine_inputs(story, <<>>, inputs, seed, step_through_blank?)
     end
   end
 
@@ -140,10 +131,10 @@ defmodule Exzm do
 
     {save, output, seed, diagnostics} =
       if diagnostics? do
-        send_zmachine_input_with_diagnostics(story, save, input, seed)
+        send_zmachine_input_with_diagnostics(story, save, input, seed, step_through_blank?)
       else
         {save, output, seed} =
-          send_zmachine_input(story, save, input, seed)
+          send_zmachine_input(story, save, input, seed, step_through_blank?)
 
         {save, output, seed, nil}
       end
@@ -169,16 +160,16 @@ defmodule Exzm do
       when is_binary(story) and byte_size(story) > 0 and
              is_binary(save) and byte_size(save) > 0 do
     {seed, opts} = Keyword.pop(opts, :seed, nil)
-    {_step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
+    {step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
     {diagnostics?, opts} = Keyword.pop(opts, :diagnostics, false)
     if !Enum.empty?(opts), do: raise(ArgumentError, "invalid opts #{inspect(opts)}")
 
     inputs = [first_input | rest_inputs]
 
     if diagnostics? do
-      send_zmachine_inputs_with_diagnostics(story, save, inputs, seed)
+      send_zmachine_inputs_with_diagnostics(story, save, inputs, seed, step_through_blank?)
     else
-      send_zmachine_inputs(story, save, inputs, seed)
+      send_zmachine_inputs(story, save, inputs, seed, step_through_blank?)
     end
   end
 
@@ -190,34 +181,57 @@ defmodule Exzm do
     text |> String.trim() |> String.trim_trailing(">") |> String.trim_trailing()
   end
 
-  defp send_zmachine_input(story, save, input, seed) do
+  defp send_zmachine_input(story, save, input, seed, step_through_blank?) do
     {save, output, seed} =
       call_zmachine_nifs(story, save, input, seed)
 
     output = format_output(output)
 
-    {save, output, seed}
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    if step_through_blank? and String.length(output) == 0 do
+      send_zmachine_input(story, save, " ", seed, step_through_blank?)
+    else
+      {save, output, seed}
+    end
   end
 
-  defp send_zmachine_input_with_diagnostics(story, save, input, seed) do
+  defp send_zmachine_input_with_diagnostics(story, save, input, seed, step_through_blank?) do
     {save, output, seed, diagnostics} =
       call_zmachine_nifs_with_diagnostics(story, save, input, seed)
 
     output = format_output(output)
 
-    {save, output, seed, diagnostics}
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    if step_through_blank? and String.length(output) == 0 do
+      send_zmachine_input_with_diagnostics(story, save, " ", seed, step_through_blank?)
+    else
+      {save, output, seed, diagnostics}
+    end
   end
 
-  defp send_zmachine_inputs(story, save, inputs, seed) do
+  defp send_zmachine_inputs(story, save, inputs, seed, step_through_blank?) do
     [first_input | rest_inputs] = inputs
 
     {save, first_output, seed} =
       call_zmachine_nifs(story, save, first_input, seed)
 
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    {save, first_output, seed} =
+      if step_through_blank? and String.length(first_output) == 0 do
+        call_zmachine_nifs(story, save, " ", seed)
+      else
+        {save, first_output, seed}
+      end
+
     {save, rest_output, seed} =
       case rest_inputs do
-        [] -> {save, "", seed}
-        _ -> send_zmachine_inputs(story, save, rest_inputs, seed)
+        [] ->
+          {save, "", seed}
+
+        _ ->
+          send_zmachine_inputs(story, save, rest_inputs, seed, step_through_blank?)
+          # TODO: Try and make this recursion tail-call optimizable
+          # TODO: by passing data into send_zmachine_inputs.
       end
 
     output = format_output(first_output <> rest_output)
@@ -225,16 +239,36 @@ defmodule Exzm do
     {save, output, seed}
   end
 
-  defp send_zmachine_inputs_with_diagnostics(story, save, inputs, seed) do
+  defp send_zmachine_inputs_with_diagnostics(story, save, inputs, seed, step_through_blank?) do
     [first_input | rest_inputs] = inputs
 
     {save, first_output, seed, first_diagnostics} =
       call_zmachine_nifs_with_diagnostics(story, save, first_input, seed)
 
+    # If output is blank and :step_through_blank specified, take another ZVM step:
+    {save, first_output, seed, first_diagnostics} =
+      if step_through_blank? and String.length(first_output) == 0 do
+        call_zmachine_nifs_with_diagnostics(story, save, " ", seed)
+      else
+        {save, first_output, seed, first_diagnostics}
+      end
+
     {save, rest_output, seed, rest_diagnostics} =
       case rest_inputs do
-        [] -> {save, "", seed, nil}
-        _ -> send_zmachine_inputs_with_diagnostics(story, save, rest_inputs, seed)
+        [] ->
+          {save, "", seed, nil}
+
+        _ ->
+          send_zmachine_inputs_with_diagnostics(
+            story,
+            save,
+            rest_inputs,
+            seed,
+            step_through_blank?
+          )
+
+          # TODO: Try and make this recursion tail-call optimizable.
+          # TODO: by passing data into send_zmachine_inputs.
       end
 
     output = format_output(first_output <> rest_output)
