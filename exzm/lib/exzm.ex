@@ -174,14 +174,24 @@ defmodule Exzm do
 
   defp combine_diagnostics(first_diagnostics, rest_diagnostics) do
     %{
-      seed_nif: first_diagnostics.seed_nif ++ rest_diagnostics.seed_nif,
-      init_nif: first_diagnostics.init_nif ++ rest_diagnostics.init_nif,
-      step_1_nif: first_diagnostics.step_1_nif ++ rest_diagnostics.step_1_nif,
-      step_2_nif: first_diagnostics.step_2_nif ++ rest_diagnostics.step_2_nif,
-      output_nif: first_diagnostics.output_nif ++ rest_diagnostics.output_nif,
-      save_nif: first_diagnostics.save_nif ++ rest_diagnostics.save_nif,
-      send_line_nif: first_diagnostics.send_line_nif ++ rest_diagnostics.send_line_nif,
-      send_char_nif: first_diagnostics.send_char_nif ++ rest_diagnostics.send_char_nif
+      seed_nif:
+        Map.get(first_diagnostics, :seed_nif, []) ++ Map.get(rest_diagnostics, :seed_nif, []),
+      init_nif:
+        Map.get(first_diagnostics, :init_nif, []) ++ Map.get(rest_diagnostics, :init_nif, []),
+      step_1_nif:
+        Map.get(first_diagnostics, :step_1_nif, []) ++ Map.get(rest_diagnostics, :step_1_nif, []),
+      step_2_nif:
+        Map.get(first_diagnostics, :step_2_nif, []) ++ Map.get(rest_diagnostics, :step_2_nif, []),
+      output_nif:
+        Map.get(first_diagnostics, :output_nif, []) ++ Map.get(rest_diagnostics, :output_nif, []),
+      save_nif:
+        Map.get(first_diagnostics, :save_nif, []) ++ Map.get(rest_diagnostics, :save_nif, []),
+      send_line_nif:
+        Map.get(first_diagnostics, :send_line_nif, []) ++
+          Map.get(rest_diagnostics, :send_line_nif, []),
+      send_char_nif:
+        Map.get(first_diagnostics, :send_char_nif, []) ++
+          Map.get(rest_diagnostics, :send_char_nif, [])
     }
   end
 
@@ -216,80 +226,81 @@ defmodule Exzm do
     end
   end
 
-  defp send_zmachine_inputs(story, save, inputs, seed, step_through_blank?) do
+  defp send_zmachine_inputs(story, save, inputs, seed, step_through_blank?, prior_output \\ "") do
     [first_input | rest_inputs] = inputs
 
-    {save, first_output, seed} =
+    {save, output, seed} =
       call_zmachine_nifs(story, save, first_input, seed)
 
     # If output is blank and :step_through_blank specified, take another ZVM step:
-    {save, first_output, seed} =
-      if step_through_blank? and String.length(first_output) == 0 do
+    {save, output, seed} =
+      if step_through_blank? and String.length(output) == 0 do
         call_zmachine_nifs(story, save, " ", seed)
       else
-        {save, first_output, seed}
+        {save, output, seed}
       end
 
-    {save, rest_output, seed} =
-      case rest_inputs do
-        [] ->
-          {save, "", seed}
+    case rest_inputs do
+      [] ->
+        {save, format_output(prior_output <> output), seed}
 
-        _ ->
-          send_zmachine_inputs(story, save, rest_inputs, seed, step_through_blank?)
-          # TODO: Try and make this recursion tail-call optimizable
-          # TODO: by passing data into send_zmachine_inputs.
-      end
-
-    output = format_output(first_output <> rest_output)
-
-    {save, output, seed}
+      _ ->
+        send_zmachine_inputs(
+          story,
+          save,
+          rest_inputs,
+          seed,
+          step_through_blank?,
+          format_output(prior_output <> output)
+          # Tail-call optimization: prior_output passed here
+          # so this recursive call is the final expression.
+        )
+    end
   end
 
-  defp send_zmachine_inputs_with_diagnostics(story, save, inputs, seed, step_through_blank?) do
+  defp send_zmachine_inputs_with_diagnostics(
+         story,
+         save,
+         inputs,
+         seed,
+         step_through_blank?,
+         prior_output \\ "",
+         prior_diagnostics \\ %{}
+       ) do
     [first_input | rest_inputs] = inputs
 
-    {save, first_output, seed, first_diagnostics} =
+    {save, output, seed, diagnostics} =
       call_zmachine_nifs_with_diagnostics(story, save, first_input, seed)
 
     # If output is blank and :step_through_blank specified, take another ZVM step:
-    {save, first_output, seed, first_diagnostics} =
-      if step_through_blank? and String.length(first_output) == 0 do
-        {save, first_output, seed, blank_step_diagnostics} =
+    {save, output, seed, diagnostics} =
+      if step_through_blank? and String.length(output) == 0 do
+        {save, output, seed, blank_step_diagnostics} =
           call_zmachine_nifs_with_diagnostics(story, save, " ", seed)
 
-        {save, first_output, seed, combine_diagnostics(first_diagnostics, blank_step_diagnostics)}
+        {save, output, seed, combine_diagnostics(diagnostics, blank_step_diagnostics)}
       else
-        {save, first_output, seed, first_diagnostics}
+        {save, output, seed, diagnostics}
       end
 
-    {save, rest_output, seed, rest_diagnostics} =
-      case rest_inputs do
-        [] ->
-          {save, "", seed, nil}
+    case rest_inputs do
+      [] ->
+        {save, format_output(prior_output <> output), seed,
+         combine_diagnostics(prior_diagnostics, diagnostics)}
 
-        _ ->
-          send_zmachine_inputs_with_diagnostics(
-            story,
-            save,
-            rest_inputs,
-            seed,
-            step_through_blank?
-          )
-
-          # TODO: Try and make this recursion tail-call optimizable.
-          # TODO: by passing data into send_zmachine_inputs.
-      end
-
-    output = format_output(first_output <> rest_output)
-
-    diagnostics =
-      case rest_diagnostics do
-        nil -> first_diagnostics
-        _ -> combine_diagnostics(first_diagnostics, rest_diagnostics)
-      end
-
-    {save, output, seed, diagnostics}
+      _ ->
+        send_zmachine_inputs_with_diagnostics(
+          story,
+          save,
+          rest_inputs,
+          seed,
+          step_through_blank?,
+          format_output(prior_output <> output),
+          combine_diagnostics(prior_diagnostics, diagnostics)
+          # Tail-call optimization: prior_output and prior_diagnostics passed here
+          # so this recursive call is the final expression.
+        )
+    end
   end
 
   defp call_zmachine_nifs(story, save, input, seed) do
