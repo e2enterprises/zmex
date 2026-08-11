@@ -191,7 +191,10 @@ defmodule Exzm do
           Map.get(rest_diagnostics, :send_line_nif, []),
       send_char_nif:
         Map.get(first_diagnostics, :send_char_nif, []) ++
-          Map.get(rest_diagnostics, :send_char_nif, [])
+          Map.get(rest_diagnostics, :send_char_nif, []),
+      unicode_table_nif:
+        Map.get(first_diagnostics, :unicode_table_nif, []) ++
+          Map.get(rest_diagnostics, :unicode_table_nif, [])
     }
   end
 

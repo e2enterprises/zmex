@@ -192,8 +192,19 @@ defmodule ExzmCli do
       end
 
       case format_nif_diagnostic_records(diagnostics.send_char_nif) do
-        "" -> {}
-        formatted -> IO.puts("         | Send-Char Z-machine NIF call       : #{formatted}")
+        "" ->
+          {}
+
+        formatted ->
+          IO.puts("         | Send-Char Z-machine NIF call       : #{formatted}")
+      end
+
+      case format_nif_diagnostic_records(diagnostics.unicode_table_nif) do
+        "" ->
+          {}
+
+        formatted ->
+          IO.puts("         | Unicode Table Z-machine NIF call   : #{formatted}")
       end
 
       IO.puts(
