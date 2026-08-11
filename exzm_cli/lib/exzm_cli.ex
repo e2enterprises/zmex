@@ -11,12 +11,15 @@ defmodule ExzmCli do
     seed |> :erlang.term_to_binary() |> Base.encode64(padding: false)
   end
 
-  def format_nif_ms(nif_ms) do
-    if nif_ms > 1 do
-      "#{nif_ms}ms"
-    else
-      "#{nif_ms}ms ✔"
+  def format_nif_diagnostic_records(records) do
+    for {duration, _input, _output, _result} <- records, into: "" do
+      case duration do
+        nil -> ""
+        duration when duration > 1 -> "#{duration}ms -> "
+        _ -> "#{duration}ms ✔ -> "
+      end
     end
+    |> String.replace_suffix(" -> ", "")
   end
 
   def loop(argv \\ nil) do
@@ -169,42 +172,40 @@ defmodule ExzmCli do
         IO.puts("         | Loading Save Data                  : #{save_time / 1000}ms")
       end
 
-      if diagnostics.seed_nif_ms > 0 do
+      if diagnostics.seed_nif > 0 do
         IO.puts(
-          "         | Compute seed NIF call              : #{format_nif_ms(diagnostics.seed_nif_ms)}"
+          "         | Compute seed NIF call              : #{format_nif_diagnostic_records(diagnostics.seed_nif)}"
         )
       end
 
       IO.puts(
-        "         | Init Z-machine Step NIF call       : #{format_nif_ms(diagnostics.init_nif_ms)}"
+        "         | Init Z-machine Step NIF call       : #{format_nif_diagnostic_records(diagnostics.init_nif)}"
       )
 
       IO.puts(
-        "         | Pre-input Z-machine Step NIF call  : #{format_nif_ms(diagnostics.step_1_nif_ms)}"
+        "         | Pre-input Z-machine Step NIF call  : #{format_nif_diagnostic_records(diagnostics.step_1_nif)}"
       )
 
-      if diagnostics.send_line_nif_ms > 0 do
-        IO.puts(
-          "         | Send-Line Z-machine NIF call       : #{format_nif_ms(diagnostics.send_line_nif_ms)}"
-        )
+      case format_nif_diagnostic_records(diagnostics.send_line_nif) do
+        "" -> {}
+        formatted -> IO.puts("         | Send-Line Z-machine NIF call       : #{formatted}")
       end
 
-      if diagnostics.send_char_nif_ms > 0 do
-        IO.puts(
-          "         | Send-Char Z-machine NIF call    : #{format_nif_ms(diagnostics.send_char_nif_ms)}"
-        )
+      case format_nif_diagnostic_records(diagnostics.send_char_nif) do
+        "" -> {}
+        formatted -> IO.puts("         | Send-Char Z-machine NIF call       : #{formatted}")
       end
 
       IO.puts(
-        "         | Post-Input Z-machine Step NIF call : #{format_nif_ms(diagnostics.step_2_nif_ms)}"
+        "         | Post-Input Z-machine Step NIF call : #{format_nif_diagnostic_records(diagnostics.step_2_nif)}"
       )
 
       IO.puts(
-        "         | Z-machine Output NIF call          : #{format_nif_ms(diagnostics.output_nif_ms)}"
+        "         | Z-machine Output NIF call          : #{format_nif_diagnostic_records(diagnostics.output_nif)}"
       )
 
       IO.puts(
-        "         | Z-machine Save NIF call            : #{format_nif_ms(diagnostics.save_nif_ms)}"
+        "         | Z-machine Save NIF call            : #{format_nif_diagnostic_records(diagnostics.save_nif)}"
       )
 
       IO.puts("")

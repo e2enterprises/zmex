@@ -55,7 +55,7 @@ defmodule Exzm do
   # Results
   # -------
   # {save: binary, output: str, seed: {int, int, int, int} }
-  # {save: binary, output: str, seed, diagostics: %{nif_duration_ms: int} }
+  # {save: binary, output: str, seed, diagostics: %{nif_duration: int} }
 
   # Public API
   # ----------
@@ -139,19 +139,10 @@ defmodule Exzm do
         {save, output, seed, nil}
       end
 
-    # If output is blank and :step_through_blank specified, take another ZVM step:
-    if step_through_blank? and String.length(output) == 0 do
-      continue(story, save, " ",
-        seed: seed,
-        step_through_blank: step_through_blank?,
-        diagnostics: diagnostics?
-      )
+    if diagnostics? do
+      {save, output, seed, diagnostics}
     else
-      if diagnostics? do
-        {save, output, seed, diagnostics}
-      else
-        {save, output, seed}
-      end
+      {save, output, seed}
     end
   end
 
@@ -181,6 +172,19 @@ defmodule Exzm do
     text |> String.trim() |> String.trim_trailing(">") |> String.trim_trailing()
   end
 
+  defp combine_diagnostics(first_diagnostics, rest_diagnostics) do
+    %{
+      seed_nif: first_diagnostics.seed_nif ++ rest_diagnostics.seed_nif,
+      init_nif: first_diagnostics.init_nif ++ rest_diagnostics.init_nif,
+      step_1_nif: first_diagnostics.step_1_nif ++ rest_diagnostics.step_1_nif,
+      step_2_nif: first_diagnostics.step_2_nif ++ rest_diagnostics.step_2_nif,
+      output_nif: first_diagnostics.output_nif ++ rest_diagnostics.output_nif,
+      save_nif: first_diagnostics.save_nif ++ rest_diagnostics.save_nif,
+      send_line_nif: first_diagnostics.send_line_nif ++ rest_diagnostics.send_line_nif,
+      send_char_nif: first_diagnostics.send_char_nif ++ rest_diagnostics.send_char_nif
+    }
+  end
+
   defp send_zmachine_input(story, save, input, seed, step_through_blank?) do
     {save, output, seed} =
       call_zmachine_nifs(story, save, input, seed)
@@ -189,7 +193,7 @@ defmodule Exzm do
 
     # If output is blank and :step_through_blank specified, take another ZVM step:
     if step_through_blank? and String.length(output) == 0 do
-      send_zmachine_input(story, save, " ", seed, step_through_blank?)
+      call_zmachine_nifs(story, save, " ", seed)
     else
       {save, output, seed}
     end
@@ -203,7 +207,10 @@ defmodule Exzm do
 
     # If output is blank and :step_through_blank specified, take another ZVM step:
     if step_through_blank? and String.length(output) == 0 do
-      send_zmachine_input_with_diagnostics(story, save, " ", seed, step_through_blank?)
+      {save, output, seed, blank_step_diagnostics} =
+        call_zmachine_nifs_with_diagnostics(story, save, " ", seed)
+
+      {save, output, seed, combine_diagnostics(diagnostics, blank_step_diagnostics)}
     else
       {save, output, seed, diagnostics}
     end
@@ -248,7 +255,10 @@ defmodule Exzm do
     # If output is blank and :step_through_blank specified, take another ZVM step:
     {save, first_output, seed, first_diagnostics} =
       if step_through_blank? and String.length(first_output) == 0 do
-        call_zmachine_nifs_with_diagnostics(story, save, " ", seed)
+        {save, first_output, seed, blank_step_diagnostics} =
+          call_zmachine_nifs_with_diagnostics(story, save, " ", seed)
+
+        {save, first_output, seed, combine_diagnostics(first_diagnostics, blank_step_diagnostics)}
       else
         {save, first_output, seed, first_diagnostics}
       end
@@ -275,24 +285,8 @@ defmodule Exzm do
 
     diagnostics =
       case rest_diagnostics do
-        nil ->
-          first_diagnostics
-
-        _ ->
-          %{
-            seed_nif_ms: first_diagnostics.seed_nif_ms + rest_diagnostics.seed_nif_ms,
-            init_nif_ms: first_diagnostics.init_nif_ms + rest_diagnostics.init_nif_ms,
-            step_1_nif_ms: first_diagnostics.step_1_nif_ms + rest_diagnostics.step_1_nif_ms,
-            step_2_nif_ms: first_diagnostics.step_2_nif_ms + rest_diagnostics.step_2_nif_ms,
-            output_nif_ms: first_diagnostics.output_nif_ms + rest_diagnostics.output_nif_ms,
-            save_nif_ms: first_diagnostics.save_nif_ms + rest_diagnostics.save_nif_ms,
-            send_line_nif_ms:
-              first_diagnostics.send_line_nif_ms +
-                rest_diagnostics.send_line_nif_ms,
-            send_char_nif_ms:
-              first_diagnostics.send_char_nif_ms +
-                rest_diagnostics.send_char_nif_ms
-          }
+        nil -> first_diagnostics
+        _ -> combine_diagnostics(first_diagnostics, rest_diagnostics)
       end
 
     {save, output, seed, diagnostics}
@@ -362,16 +356,16 @@ defmodule Exzm do
         [story, save, seed_a, seed_b, seed_c, seed_d]
       )
 
-    {step_1_nif_microsec, step} =
+    {step_1_nif_microsec, step_1} =
       :timer.tc(&EncrustedNif.step_zmachine/1, [zmachine])
 
-    {send_nif_microsec, unicode_table_nif_microsec, {}} =
-      case step do
+    {send_nif_microsec, unicode_table_nif_microsec, unicode_table} =
+      case step_1 do
         "ReadLine" ->
           {send_nif_microsec, {}} =
             :timer.tc(&EncrustedNif.send_line_to_zmachine/2, [zmachine, input])
 
-          {send_nif_microsec, 0, {}}
+          {send_nif_microsec, 0, nil}
 
         "ReadChar" ->
           {unicode_table_nif_microsec, unicode_table} =
@@ -383,13 +377,13 @@ defmodule Exzm do
               [zmachine, input, unicode_table]
             )
 
-          {send_nif_microsec, unicode_table_nif_microsec, {}}
+          {send_nif_microsec, unicode_table_nif_microsec, unicode_table}
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
 
-    {step_2_nif_microsec, _step} =
+    {step_2_nif_microsec, step_2} =
       :timer.tc(&EncrustedNif.step_zmachine/1, [zmachine])
 
     {output_nif_microsec, output} =
@@ -402,35 +396,37 @@ defmodule Exzm do
     # so we need to convert from list to Elixir binary here:
     save = :binary.list_to_bin(save)
 
+    seed = {seed_a, seed_b, seed_c, seed_d}
+
     diagnostics = %{
-      seed_nif_ms: seed_nif_microsec / 1000,
-      init_nif_ms: init_nif_microsec / 1000,
-      step_1_nif_ms: step_1_nif_microsec / 1000,
-      send_line_nif_ms: 0,
-      send_char_nif_ms: 0,
-      unicode_table_nif_ms: 0,
-      step_2_nif_ms: step_2_nif_microsec / 1000,
-      output_nif_ms: output_nif_microsec / 1000,
-      save_nif_ms: save_nif_microsec / 1000
+      seed_nif: [{seed_nif_microsec / 1000, input, output, seed}],
+      init_nif: [{init_nif_microsec / 1000, input, output, zmachine}],
+      step_1_nif: [{step_1_nif_microsec / 1000, input, output, step_1}],
+      send_line_nif: [{nil, input, output, {}}],
+      send_char_nif: [{nil, input, output, {}}],
+      unicode_table_nif: [{nil, input, output, nil}],
+      step_2_nif: [{step_2_nif_microsec / 1000, input, output, step_2}],
+      output_nif: [{output_nif_microsec / 1000, input, output, output}],
+      save_nif: [{save_nif_microsec / 1000, input, output, save}]
     }
 
     diagnostics =
-      case step do
+      case step_1 do
         "ReadLine" ->
-          %{diagnostics | send_line_nif_ms: send_nif_microsec / 1000}
+          %{diagnostics | send_line_nif: [{send_nif_microsec / 1000, input, output, {}}]}
 
         "ReadChar" ->
           %{
             diagnostics
-            | send_char_nif_ms: send_nif_microsec / 1000,
-              unicode_table_nif_ms: unicode_table_nif_microsec / 1000
+            | send_char_nif: [{send_nif_microsec / 1000, input, output, {}}],
+              unicode_table_nif: [
+                {unicode_table_nif_microsec / 1000, input, output, unicode_table}
+              ]
           }
 
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
-
-    seed = {seed_a, seed_b, seed_c, seed_d}
 
     {save, output, seed, diagnostics}
   end

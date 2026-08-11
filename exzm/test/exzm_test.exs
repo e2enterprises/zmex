@@ -88,18 +88,27 @@ defmodule ExzmTest.Utils do
   defp assert_valid_diagnostics(diagnostics?, diagnostics) do
     if diagnostics? do
       for key <- [
-            :seed_nif_ms,
-            :init_nif_ms,
-            :step_1_nif_ms,
-            :step_2_nif_ms,
-            :send_line_nif_ms,
-            :send_char_nif_ms,
-            :output_nif_ms,
-            :save_nif_ms
+            :seed_nif,
+            :init_nif,
+            :step_1_nif,
+            :step_2_nif,
+            :send_line_nif,
+            :send_char_nif,
+            :output_nif,
+            :save_nif
           ] do
         value = Map.get(diagnostics, key)
-        assert is_number(value)
-        assert value >= 0
+        assert is_list(value)
+
+        for list <- Map.values(diagnostics) do
+          for record <- list do
+            {duration, input, output, _result} = record
+            assert is_number(duration) or duration == nil
+            assert duration >= 0
+            assert is_binary(input)
+            assert is_binary(output)
+          end
+        end
       end
     end
   end
