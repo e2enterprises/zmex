@@ -113,6 +113,7 @@ defmodule Exzm do
   def new_game(story, [first_input | rest_inputs], opts)
       when is_binary(story) and byte_size(story) > 0 do
     {seed, opts} = Keyword.pop(opts, :seed, nil)
+    {_step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
     {diagnostics?, opts} = Keyword.pop(opts, :diagnostics, false)
     if !Enum.empty?(opts), do: raise(ArgumentError, "invalid opts #{inspect(opts)}")
 
@@ -168,6 +169,7 @@ defmodule Exzm do
       when is_binary(story) and byte_size(story) > 0 and
              is_binary(save) and byte_size(save) > 0 do
     {seed, opts} = Keyword.pop(opts, :seed, nil)
+    {_step_through_blank?, opts} = Keyword.pop(opts, :step_through_blank, false)
     {diagnostics?, opts} = Keyword.pop(opts, :diagnostics, false)
     if !Enum.empty?(opts), do: raise(ArgumentError, "invalid opts #{inspect(opts)}")
 
@@ -197,20 +199,6 @@ defmodule Exzm do
     {save, output, seed}
   end
 
-  defp send_zmachine_inputs(story, save, inputs, seed) do
-    [first_input | rest_inputs] = inputs
-
-    {save, first_output, seed} =
-      call_zmachine_nifs(story, save, first_input, seed)
-
-    {save, rest_output, seed} =
-      send_zmachine_inputs(story, save, rest_inputs, seed)
-
-    output = format_output(first_output <> rest_output)
-
-    {save, output, seed}
-  end
-
   defp send_zmachine_input_with_diagnostics(story, save, input, seed) do
     {save, output, seed, diagnostics} =
       call_zmachine_nifs_with_diagnostics(story, save, input, seed)
@@ -220,6 +208,23 @@ defmodule Exzm do
     {save, output, seed, diagnostics}
   end
 
+  defp send_zmachine_inputs(story, save, inputs, seed) do
+    [first_input | rest_inputs] = inputs
+
+    {save, first_output, seed} =
+      call_zmachine_nifs(story, save, first_input, seed)
+
+    {save, rest_output, seed} =
+      case rest_inputs do
+        [] -> {save, "", seed}
+        _ -> send_zmachine_inputs(story, save, rest_inputs, seed)
+      end
+
+    output = format_output(first_output <> rest_output)
+
+    {save, output, seed}
+  end
+
   defp send_zmachine_inputs_with_diagnostics(story, save, inputs, seed) do
     [first_input | rest_inputs] = inputs
 
@@ -227,22 +232,34 @@ defmodule Exzm do
       call_zmachine_nifs_with_diagnostics(story, save, first_input, seed)
 
     {save, rest_output, seed, rest_diagnostics} =
-      send_zmachine_inputs_with_diagnostics(story, save, rest_inputs, seed)
+      case rest_inputs do
+        [] -> {save, "", seed, nil}
+        _ -> send_zmachine_inputs_with_diagnostics(story, save, rest_inputs, seed)
+      end
 
     output = format_output(first_output <> rest_output)
 
-    diagnostics = %{
-      step_1_nif_ms: first_diagnostics.step_1_nif_ms + rest_diagnostics.step_1_nif_ms,
-      step_2_nif_ms: first_diagnostics.step_2_nif_ms + rest_diagnostics.step_2_nif_ms,
-      output_nif_ms: first_diagnostics.output_nif_ms + rest_diagnostics.output_nif_ms,
-      save_nif_ms: first_diagnostics.save_nif_ms + rest_diagnostics.save_nif_ms,
-      send_input_nif_ms:
-        first_diagnostics.send_line_nif_ms +
-          rest_diagnostics.send_line_nif_ms,
-      send_char_nif_ms:
-        first_diagnostics.send_char_nif_ms +
-          rest_diagnostics.send_char_nif_ms
-    }
+    diagnostics =
+      case rest_diagnostics do
+        nil ->
+          first_diagnostics
+
+        _ ->
+          %{
+            seed_nif_ms: first_diagnostics.seed_nif_ms + rest_diagnostics.seed_nif_ms,
+            init_nif_ms: first_diagnostics.init_nif_ms + rest_diagnostics.init_nif_ms,
+            step_1_nif_ms: first_diagnostics.step_1_nif_ms + rest_diagnostics.step_1_nif_ms,
+            step_2_nif_ms: first_diagnostics.step_2_nif_ms + rest_diagnostics.step_2_nif_ms,
+            output_nif_ms: first_diagnostics.output_nif_ms + rest_diagnostics.output_nif_ms,
+            save_nif_ms: first_diagnostics.save_nif_ms + rest_diagnostics.save_nif_ms,
+            send_line_nif_ms:
+              first_diagnostics.send_line_nif_ms +
+                rest_diagnostics.send_line_nif_ms,
+            send_char_nif_ms:
+              first_diagnostics.send_char_nif_ms +
+                rest_diagnostics.send_char_nif_ms
+          }
+      end
 
     {save, output, seed, diagnostics}
   end
