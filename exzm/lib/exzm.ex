@@ -199,8 +199,6 @@ defmodule Exzm do
     {save, output, seed} =
       call_zmachine_nifs(story, save, input, seed)
 
-    output = format_output(output)
-
     # If output is blank and :step_through_blank specified, take another ZVM step:
     if step_through_blank? and String.length(output) == 0 do
       call_zmachine_nifs(story, save, " ", seed)
@@ -212,8 +210,6 @@ defmodule Exzm do
   defp send_zmachine_input_with_diagnostics(story, save, input, seed, step_through_blank?) do
     {save, output, seed, diagnostics} =
       call_zmachine_nifs_with_diagnostics(story, save, input, seed)
-
-    output = format_output(output)
 
     # If output is blank and :step_through_blank specified, take another ZVM step:
     if step_through_blank? and String.length(output) == 0 do
@@ -242,7 +238,7 @@ defmodule Exzm do
 
     case rest_inputs do
       [] ->
-        {save, format_output(prior_output <> output), seed}
+        {save, prior_output <> output, seed}
 
       _ ->
         send_zmachine_inputs(
@@ -251,7 +247,7 @@ defmodule Exzm do
           rest_inputs,
           seed,
           step_through_blank?,
-          format_output(prior_output <> output)
+          prior_output <> output
           # Tail-call optimization: prior_output passed here
           # so this recursive call is the final expression.
         )
@@ -285,8 +281,7 @@ defmodule Exzm do
 
     case rest_inputs do
       [] ->
-        {save, format_output(prior_output <> output), seed,
-         combine_diagnostics(prior_diagnostics, diagnostics)}
+        {save, prior_output <> output, seed, combine_diagnostics(prior_diagnostics, diagnostics)}
 
       _ ->
         send_zmachine_inputs_with_diagnostics(
@@ -295,7 +290,7 @@ defmodule Exzm do
           rest_inputs,
           seed,
           step_through_blank?,
-          format_output(prior_output <> output),
+          prior_output <> output,
           combine_diagnostics(prior_diagnostics, diagnostics)
           # Tail-call optimization: prior_output and prior_diagnostics passed here
           # so this recursive call is the final expression.
@@ -345,6 +340,8 @@ defmodule Exzm do
     save = :binary.list_to_bin(save)
 
     seed = {seed_a, seed_b, seed_c, seed_d}
+
+    output = format_output(output)
 
     {save, output, seed}
   end
@@ -438,6 +435,8 @@ defmodule Exzm do
         unexpected ->
           raise(RuntimeError, "unexpected ZMachine step (#{unexpected})")
       end
+
+    output = format_output(output)
 
     {save, output, seed, diagnostics}
   end
