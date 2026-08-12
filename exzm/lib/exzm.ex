@@ -173,29 +173,21 @@ defmodule Exzm do
   end
 
   defp combine_diagnostics(first_diagnostics, rest_diagnostics) do
-    %{
-      seed_nif:
-        Map.get(first_diagnostics, :seed_nif, []) ++ Map.get(rest_diagnostics, :seed_nif, []),
-      init_nif:
-        Map.get(first_diagnostics, :init_nif, []) ++ Map.get(rest_diagnostics, :init_nif, []),
-      step_1_nif:
-        Map.get(first_diagnostics, :step_1_nif, []) ++ Map.get(rest_diagnostics, :step_1_nif, []),
-      step_2_nif:
-        Map.get(first_diagnostics, :step_2_nif, []) ++ Map.get(rest_diagnostics, :step_2_nif, []),
-      output_nif:
-        Map.get(first_diagnostics, :output_nif, []) ++ Map.get(rest_diagnostics, :output_nif, []),
-      save_nif:
-        Map.get(first_diagnostics, :save_nif, []) ++ Map.get(rest_diagnostics, :save_nif, []),
-      send_line_nif:
-        Map.get(first_diagnostics, :send_line_nif, []) ++
-          Map.get(rest_diagnostics, :send_line_nif, []),
-      send_char_nif:
-        Map.get(first_diagnostics, :send_char_nif, []) ++
-          Map.get(rest_diagnostics, :send_char_nif, []),
-      unicode_table_nif:
-        Map.get(first_diagnostics, :unicode_table_nif, []) ++
-          Map.get(rest_diagnostics, :unicode_table_nif, [])
-    }
+    cond do
+      rest_diagnostics == nil ->
+        first_diagnostics
+
+      first_diagnostics == nil ->
+        rest_diagnostics
+
+      true ->
+        for key <- Enum.uniq(Map.keys(first_diagnostics) ++ Map.keys(rest_diagnostics)),
+            into: %{} do
+          {key, Map.fetch!(first_diagnostics, key) ++ Map.fetch!(rest_diagnostics, key)}
+          # Force diagnostics maps to match with uniq and fetch!; will error out otherwise.
+          # Performance is not a concern, diagnostics map size will be small.
+        end
+    end
   end
 
   defp send_zmachine_input(story, save, input, seed, step_through_blank?) do
@@ -264,7 +256,7 @@ defmodule Exzm do
          seed,
          step_through_blank?,
          prior_output \\ "",
-         prior_diagnostics \\ %{}
+         prior_diagnostics \\ nil
        ) do
     [first_input | rest_inputs] = inputs
 
