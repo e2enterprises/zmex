@@ -12,14 +12,17 @@ defmodule ExzmCli do
   end
 
   def format_nif_diagnostic_records(records) do
-    for {duration, _input, _output, _result} <- records, into: "" do
-      case duration do
-        nil -> ""
-        duration when duration > 1 -> "#{duration}ms -> "
-        _ -> "#{duration}ms ✔ -> "
+    records
+    |> Stream.map(fn {duration, _input, _output, _result} -> duration end)
+    |> Stream.filter(&(&1 != nil))
+    |> Stream.map(fn duration ->
+      if duration <= 1 do
+        "#{duration}ms ✔"
+      else
+        "#{duration}ms"
       end
-    end
-    |> String.replace_suffix(" -> ", "")
+    end)
+    |> Enum.join(" -> ")
   end
 
   def loop(argv \\ nil) do
