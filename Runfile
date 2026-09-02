@@ -1,3 +1,15 @@
+build: # build zmex
+	cd zmex
+	mix compile --force
+
+docs: build # build docs site
+	cd zmex
+	mix docs
+
+read: docs # open the docs site after building
+	cd zmex
+	open doc/index.html
+
 elixir: # play a story using Elixir CLI
 	cd zmex_cli
 	mix zmex $(@)

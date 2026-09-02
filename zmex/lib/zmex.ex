@@ -36,6 +36,9 @@ end
 
 defmodule Zmex do
   alias Zmex.EncrustedNif
+  import DryDoc
+
+  @moduledoc doc_from_readme()
 
   # Suppress incorrect Dialyzer warnings due to NIF calls:
   @dialyzer {:no_return, send_zmachine_inputs: 5}
