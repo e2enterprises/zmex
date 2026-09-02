@@ -12,5 +12,5 @@ itertools = "0.15.0"
 
 [[bin]]
 path = "src/main.rs"
-name = "exzm"
+name = "zmex"
 bench = false

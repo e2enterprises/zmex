@@ -1,4 +1,4 @@
-defmodule ExzmCli do
+defmodule ZmexCli do
   def parse_seed(seed) do
     case Base.decode64(seed, padding: false) do
       {:ok, term} -> :erlang.binary_to_term(term)
@@ -135,7 +135,7 @@ defmodule ExzmCli do
       cond do
         !verbose and byte_size(save) == 0 ->
           {new_save, output, seed} =
-            Exzm.new_game(story, input_str,
+            Zmex.new_game(story, input_str,
               seed: seed,
               step_through_blank: true
             )
@@ -143,7 +143,7 @@ defmodule ExzmCli do
           {new_save, output, seed, nil}
 
         !!verbose and byte_size(save) == 0 ->
-          Exzm.new_game(story, input_str,
+          Zmex.new_game(story, input_str,
             seed: seed,
             step_through_blank: true,
             diagnostics: true
@@ -151,7 +151,7 @@ defmodule ExzmCli do
 
         !verbose ->
           {new_save, output, seed} =
-            Exzm.continue(story, save, input_str,
+            Zmex.continue(story, save, input_str,
               seed: seed,
               step_through_blank: true
             )
@@ -159,7 +159,7 @@ defmodule ExzmCli do
           {new_save, output, seed, nil}
 
         !!verbose ->
-          Exzm.continue(story, save, input_str,
+          Zmex.continue(story, save, input_str,
             seed: seed,
             step_through_blank: true,
             diagnostics: true

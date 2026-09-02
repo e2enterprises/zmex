@@ -1,23 +1,23 @@
 elixir: # play a story using Elixir CLI
-	cd exzm_cli
-	mix exzm $(@)
+	cd zmex_cli
+	mix zmex $(@)
 
 elixir-loop: # play a story using Elixir CLI
-	cd exzm_cli
+	cd zmex_cli
 	mix loop $(@)
 
 rust: # play a story using Rust NIF
 	cd encrusted_cli
 	run start $(@)
 
-test: # run exzm tests
-	cd exzm
+test: # run zmex tests
+	cd zmex
 	mix test $(@)
 
 build-elixir-release:
-	cd exzm_cli
+	cd zmex_cli
 	MIX_ENV=prod mix release --overwrite
 
 elixir-release:
-	cd exzm_cli
-	_build/prod/rel/exzm_cli/bin/exzm_cli eval ExzmCli.main $(@)
+	cd zmex_cli
+	_build/prod/rel/zmex_cli/bin/zmex_cli eval ZmexCli.main $(@)

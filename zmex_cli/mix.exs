@@ -1,9 +1,9 @@
-defmodule Exzm.MixProject do
+defmodule ZmexCli.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :exzm,
+      app: :zmex_cli,
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
@@ -22,7 +22,7 @@ defmodule Exzm.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:rustler, "~> 0.38.0"}
+      {:zmex, path: "../zmex"}
     ]
   end
 

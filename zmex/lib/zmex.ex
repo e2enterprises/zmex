@@ -1,5 +1,5 @@
-defmodule Exzm.EncrustedNif do
-  use Rustler, otp_app: :exzm, crate: "encrusted_nif"
+defmodule Zmex.EncrustedNif do
+  use Rustler, otp_app: :zmex, crate: "encrusted_nif"
 
   def generate_zmachine_random_seed() do
     :erlang.nif_error(:nif_not_loaded)
@@ -34,8 +34,8 @@ defmodule Exzm.EncrustedNif do
   end
 end
 
-defmodule Exzm do
-  alias Exzm.EncrustedNif
+defmodule Zmex do
+  alias Zmex.EncrustedNif
 
   # Suppress incorrect Dialyzer warnings due to NIF calls:
   @dialyzer {:no_return, send_zmachine_inputs: 5}

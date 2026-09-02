@@ -15,7 +15,7 @@ use encrusted_heart::zscii::ZChar;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    let matches = Command::new("exzm")
+    let matches = Command::new("zmex")
         .version(VERSION)
         .about("A zmachine interpreter")
         .arg(Arg::new("verbose").long("verbose").action(ArgAction::SetTrue))
