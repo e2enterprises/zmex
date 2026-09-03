@@ -1,3 +1,8 @@
+# Never add Anchorhead story file to repository; Anchorhead is licensed "freeware" so
+# it can't be distributed without limitations (even though a .z8 file isn't source).
+**/*anchor*.z[0-9]
+
+# Story save files:
 /stories/*_save.qz
 
 # The directory Mix will write compiled artifacts to.
@@ -26,3 +31,4 @@ exiled_cli-*.tar
 
 # Rust binary artifacts
 **/target/**
+*.so

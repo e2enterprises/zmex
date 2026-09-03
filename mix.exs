@@ -48,6 +48,8 @@ defmodule ZMex.MixProject do
   defp deps do
     [
       {:rustler, "~> 0.38.0"},
+      {:prompt, "~> 0.10.1"},
+      {:httpoison, "~> 3.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:dry_doc, "~> 0.1.1"}
     ]

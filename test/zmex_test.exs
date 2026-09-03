@@ -72,9 +72,48 @@ defmodule ZMexTest.Utils do
   use ExUnit.Case
 
   defp load_story(story_file) do
-    case File.read(Path.join("stories", story_file)) do
+    story_path = Path.join("stories", story_file)
+
+    case File.read(story_path) do
       {:ok, story} -> story
       _ -> raise "Failed to read story file."
+    end
+  end
+
+  defp download_story(story_file, story_url) do
+    try do
+      load_story(story_file)
+    rescue
+      _error in RuntimeError ->
+        story_path = Path.join("stories", story_file)
+        bold = &IO.ANSI.format([:bright, &1])
+        underline = &IO.ANSI.format([:underline, &1])
+
+        IO.puts(bold.("\n\nStory file #{story_path} not found."))
+
+        case Prompt.confirm("Download #{underline.(story_url)} ?") do
+          :no ->
+            IO.puts("\nTests cancelled.\n")
+            System.halt(0)
+
+          _ ->
+            nil
+        end
+
+        IO.puts("Downloading...")
+
+        %HTTPoison.Response{body: body} = HTTPoison.get!(story_url)
+        File.write!(story_path, body)
+
+        IO.puts(bold.("Story file saved to #{story_path} ✔"))
+
+        IO.puts(
+          "#{bold.("!!! DO NOT COMMIT THIS FILE !!!")} (licensing does not permit distribution)"
+        )
+
+        IO.puts("Running tests...\n")
+
+        load_story(story_file)
     end
   end
 
@@ -181,7 +220,12 @@ defmodule ZMexTest.Utils do
   end
 
   def play_anchorhead(opts \\ []) do
-    story = load_story("anchor.z8")
+    story =
+      download_story(
+        "anchor.z8",
+        "https://ukrestrict.ifarchive.org/if-archive/games/zcode/anchor.z8"
+      )
+
     diagnostics? = Keyword.get(opts, :diagnostics)
     expect_blank_step? = !Keyword.get(opts, :step_through_blank)
 
@@ -299,7 +343,12 @@ defmodule ZMexTest.Utils do
   end
 
   def play_anchorhead_multiple_inputs(opts \\ []) do
-    story = load_story("anchor.z8")
+    story =
+      download_story(
+        "anchor.z8",
+        "https://ukrestrict.ifarchive.org/if-archive/games/zcode/anchor.z8"
+      )
+
     diagnostics? = Keyword.get(opts, :diagnostics)
     expect_blank_step? = !Keyword.get(opts, :step_through_blank)
 
