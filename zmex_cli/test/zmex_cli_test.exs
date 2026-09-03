@@ -1,8 +1,8 @@
-defmodule ZmexCliTest do
+defmodule ZMexCliTest do
   use ExUnit.Case
-  doctest ZmexCli
+  doctest ZMexCli
 
   test "greets the world" do
-    assert ZmexCli.hello() == :world
+    assert ZMexCli.hello() == :world
   end
 end

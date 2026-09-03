@@ -1,12 +1,12 @@
-defmodule Zmex.MixProject do
+defmodule ZMex.MixProject do
   use Mix.Project
 
-  @name "Zmex"
+  @name "ZMex"
   @version "0.1.1"
   @repository "https://github.com/e2enterprises/zmex"
 
   defp description() do
-    "An Elixir NIF bridge to a Rust Z-Machine implementation (Inform v4, v5, v8)"
+    "IF by NIF: Call a Rust Z-Machine from Elixir and run classic text-adventure games (Inform v4, v5, v8)."
   end
 
   def project do
@@ -14,7 +14,7 @@ defmodule Zmex.MixProject do
       app: :zmex,
       description: description(),
       version: @version,
-      elixir: "~> 1.20",
+      elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       package: package(),
       docs: docs(),
@@ -37,7 +37,7 @@ defmodule Zmex.MixProject do
 
   defp docs() do
     [
-      main: Zmex,
+      main: ZMex,
       # TODO
       # logo: nil
       before_closing_head_tag: &DryDoc.before_closing_head_tag_hide_pages_tab/1,

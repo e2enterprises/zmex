@@ -1,4 +1,4 @@
-defmodule ZmexCli.MixProject do
+defmodule ZMexCli.MixProject do
   use Mix.Project
 
   def project do

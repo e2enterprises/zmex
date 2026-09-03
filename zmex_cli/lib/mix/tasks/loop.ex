@@ -2,6 +2,6 @@ defmodule Mix.Tasks.Loop do
   use Mix.Task
 
   def run(argv) do
-    ZmexCli.loop(argv)
+    ZMexCli.loop(argv)
   end
 end

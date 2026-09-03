@@ -184,4 +184,4 @@ fn save_zmachine_state(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
     // }
 }
 
-rustler::init!("Elixir.Zmex.EncrustedNif");
+rustler::init!("Elixir.ZMex.EncrustedNif");

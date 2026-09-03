@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.Zmex do
+defmodule Mix.Tasks.ZMex do
   use Mix.Task
 
   def run(argv) do
-    ZmexCli.main(argv)
+    ZMexCli.main(argv)
   end
 end
