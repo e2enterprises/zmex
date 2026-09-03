@@ -1,14 +1,22 @@
 build: # build zmex
-	cd zmex
 	mix compile --force
 
 docs: build # build docs site
-	cd zmex
 	mix docs
 
 read: docs # open the docs site after building
-	cd zmex
 	open doc/index.html
+
+test: # run zmex tests
+	mix test $(@)
+
+build-elixir-release:
+	cd zmex_cli
+	MIX_ENV=prod mix release --overwrite
+
+elixir-release:
+	cd zmex_cli
+	_build/prod/rel/zmex_cli/bin/zmex_cli eval ZMexCli.main $(@)
 
 elixir: # play a story using Elixir CLI
 	cd zmex_cli
@@ -20,16 +28,4 @@ elixir-loop: # play a story using Elixir CLI
 
 rust: # play a story using Rust NIF
 	cd encrusted_cli
-	run start $(@)
-
-test: # run zmex tests
-	cd zmex
-	mix test $(@)
-
-build-elixir-release:
-	cd zmex_cli
-	MIX_ENV=prod mix release --overwrite
-
-elixir-release:
-	cd zmex_cli
-	_build/prod/rel/zmex_cli/bin/zmex_cli eval ZMexCli.main $(@)
+	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1) $(@:2)

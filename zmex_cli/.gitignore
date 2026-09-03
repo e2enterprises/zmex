@@ -22,6 +22,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 exiled_cli-*.tar
 
-
 # Rust binary artifacts
-/target/
+**/target/**

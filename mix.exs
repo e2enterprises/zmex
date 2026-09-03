@@ -6,7 +6,7 @@ defmodule ZMex.MixProject do
   @repository "https://github.com/e2enterprises/zmex"
 
   defp description() do
-    "IF by NIF: Call a Rust Z-Machine from Elixir and run classic text-adventure games (Inform v4, v5, v8)."
+    "IF by NIF: Call a Rust Z-Machine from Elixir and run classic text-adventure games (Inform v4, v5, v8)"
   end
 
   def project do

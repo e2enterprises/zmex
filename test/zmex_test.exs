@@ -72,7 +72,7 @@ defmodule ZMexTest.Utils do
   use ExUnit.Case
 
   defp load_story(story_file) do
-    case File.read(Path.join("../stories", story_file)) do
+    case File.read(Path.join("stories", story_file)) do
       {:ok, story} -> story
       _ -> raise "Failed to read story file."
     end
