@@ -102,7 +102,8 @@ defmodule ZMexTest.Utils do
 
         IO.puts("Downloading...")
 
-        %HTTPoison.Response{body: body} = HTTPoison.get!(story_url)
+        {:ok, {{_, 200, _}, _, body}} = :httpc.request(:get, {story_url, []}, [], [])
+
         File.write!(story_path, body)
 
         IO.puts(bold.("Story file saved to #{story_path} ✔"))

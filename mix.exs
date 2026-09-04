@@ -49,13 +49,13 @@ defmodule ZMex.MixProject do
     [
       {:rustler, "~> 0.38.0"},
       {:prompt, "~> 0.10.1"},
-      {:httpoison, "~> 3.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:dry_doc, "~> 0.1.1"}
     ]
   end
 
-  def application do
-    []
-  end
+  def application, do: [extra_applications: extra_applications(Mix.env())]
+  # enable :httpc use during tests to download any missing story files:
+  defp extra_applications(:test), do: [:inets, :ssl]
+  defp extra_applications(_env), do: []
 end
