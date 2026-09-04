@@ -23,7 +23,7 @@ build-elixir-release:
 
 elixir-release:
 	cd zmex_cli
-	_build/prod/rel/zmex_cli/bin/zmex_cli eval ZMexCli.main $(@)
+	_build/prod/rel/zmex_cli/bin/zmex_cli eval ZmexCli.main $(@)
 
 elixir: # play a story using Elixir CLI
 	cd zmex_cli

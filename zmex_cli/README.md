@@ -1,4 +1,4 @@
-# ZMexCli
+# ZmexCli
 
 **TODO: Add description**
 

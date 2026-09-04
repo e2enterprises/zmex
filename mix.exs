@@ -1,7 +1,7 @@
-defmodule ZMex.MixProject do
+defmodule Zmex.MixProject do
   use Mix.Project
 
-  @name "ZMex"
+  @name "Zmex"
   @version "0.1.1"
   @repository "https://github.com/e2enterprises/zmex"
 
@@ -37,7 +37,7 @@ defmodule ZMex.MixProject do
 
   defp docs() do
     [
-      main: ZMex,
+      main: Zmex,
       # TODO
       # logo: nil
       before_closing_head_tag: &DryDoc.before_closing_head_tag_hide_pages_tab/1,

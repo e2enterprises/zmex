@@ -1,4 +1,4 @@
-defmodule ZMex.EncrustedNif do
+defmodule Zmex.EncrustedNif do
   use Rustler, otp_app: :zmex, crate: "encrusted_nif"
 
   def generate_zmachine_random_seed() do
@@ -34,8 +34,8 @@ defmodule ZMex.EncrustedNif do
   end
 end
 
-defmodule ZMex do
-  alias ZMex.EncrustedNif
+defmodule Zmex do
+  alias Zmex.EncrustedNif
   import DryDoc
 
   @moduledoc doc_from_readme()

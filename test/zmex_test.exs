@@ -1,7 +1,7 @@
-defmodule ZMexTest do
+defmodule ZmexTest do
   use ExUnit.Case
-  alias ZMexTest.Utils
-  doctest ZMex
+  alias ZmexTest.Utils
+  doctest Zmex
 
   test "[single-input] starts new games and continues them sucessfully" do
     Utils.play_adventure()
@@ -68,7 +68,7 @@ defmodule ZMexTest do
   end
 end
 
-defmodule ZMexTest.Utils do
+defmodule ZmexTest.Utils do
   use ExUnit.Case
 
   defp load_story(story_file) do
@@ -156,8 +156,8 @@ defmodule ZMexTest.Utils do
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(
         case opts do
-          [] -> ZMex.new_game(story)
-          _ -> ZMex.new_game(story, "", opts)
+          [] -> Zmex.new_game(story)
+          _ -> Zmex.new_game(story, "", opts)
         end
       )
 
@@ -173,7 +173,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "y", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "y", opts))
 
     assert output =~ "Direct me with simple commands, like NORTH"
     assert output =~ "ADVENTURE"
@@ -189,7 +189,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "north", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "north", opts))
 
     assert output =~ "In Forest"
 
@@ -202,7 +202,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "E", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "E", opts))
 
     assert output =~ "In A Valley"
     assert byte_size(save) > 0
@@ -229,8 +229,8 @@ defmodule ZMexTest.Utils do
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(
         case opts do
-          [] -> ZMex.new_game(story)
-          _ -> ZMex.new_game(story, "", opts)
+          [] -> Zmex.new_game(story)
+          _ -> Zmex.new_game(story, "", opts)
         end
       )
 
@@ -247,7 +247,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "", opts))
 
     assert match?(
              {a, b, c, d}
@@ -261,7 +261,7 @@ defmodule ZMexTest.Utils do
       if expect_blank_step? do
         # Step through blank step manually:
         assert output == ""
-        with_diagnostics_or_nil(ZMex.continue(story, save, "", opts))
+        with_diagnostics_or_nil(Zmex.continue(story, save, "", opts))
       else
         # No blank step expected because :step_through_blank was used; do nothing.
         {save, output, seed, diagnostics}
@@ -281,7 +281,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "north", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "north", opts))
 
     assert output =~ "The street goes west from here."
     assert output =~ "You can enter the office to the east"
@@ -295,7 +295,7 @@ defmodule ZMexTest.Utils do
     assert_valid_diagnostics(diagnostics?, diagnostics)
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.continue(story, save, "E", opts))
+      with_diagnostics_or_nil(Zmex.continue(story, save, "E", opts))
 
     assert output =~ "(opening the real estate office door first)"
     assert output =~ "It seems to be locked."
@@ -316,7 +316,7 @@ defmodule ZMexTest.Utils do
     inputs = ["n", "north", "E"]
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.new_game(story, inputs, opts))
+      with_diagnostics_or_nil(Zmex.new_game(story, inputs, opts))
 
     assert output =~ "Welcome to Adventure!"
     assert output =~ "Do you need instructions? (y/n)"
@@ -357,7 +357,7 @@ defmodule ZMexTest.Utils do
       end
 
     {save, output, seed, diagnostics} =
-      with_diagnostics_or_nil(ZMex.new_game(story, inputs, opts))
+      with_diagnostics_or_nil(Zmex.new_game(story, inputs, opts))
 
     assert output =~ "November, 1997."
     assert output =~ "You take a deep breath of salty air"
