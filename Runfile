@@ -1,5 +1,11 @@
-build: # build zmex
+install:
+	mix deps.get
+
+build: install # build zmex
 	mix compile --force
+
+clean: # remove dependencies and build files
+	rm -rf _build deps priv
 
 docs: build # build docs site
 	mix docs
@@ -20,7 +26,7 @@ elixir-release:
 
 elixir: # play a story using Elixir CLI
 	cd zmex_cli
-	mix zmex $(@)
+	mix play $(@)
 
 elixir-loop: # play a story using Elixir CLI
 	cd zmex_cli
