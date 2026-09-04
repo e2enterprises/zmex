@@ -91,13 +91,9 @@ defmodule ZMexTest.Utils do
 
         IO.puts(bold.("\n\nStory file #{story_path} not found."))
 
-        case Prompt.confirm("Download #{underline.(story_url)} ?") do
-          :no ->
-            IO.puts("\nTests cancelled.\n")
-            System.halt(0)
-
-          _ ->
-            nil
+        if IO.getn("Download #{underline.(story_url)} ? [Y|n]\n> ") in ["n", "N"] do
+          IO.puts("\nTests cancelled.\n")
+          System.halt(0)
         end
 
         IO.puts("Downloading...")
