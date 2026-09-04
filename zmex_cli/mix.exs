@@ -22,7 +22,7 @@ defmodule ZMexCli.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:zmex, path: "../zmex"}
+      {:zmex, path: ".."}
     ]
   end
 

@@ -68,7 +68,7 @@ defmodule ZMexCli do
     help = Keyword.get(options, :help, false)
     verbose = Keyword.get(options, :verbose, false)
 
-    story_path = Path.join("../stories", story_file)
+    story_path = Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
 
     save_path =
       Path.join(

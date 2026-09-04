@@ -72,7 +72,7 @@ defmodule ZMexTest.Utils do
   use ExUnit.Case
 
   defp load_story(story_file) do
-    story_path = Path.join("stories", story_file)
+    story_path = Path.join("native/encrusted_nif/encrusted-heart/tests", story_file)
 
     case File.read(story_path) do
       {:ok, story} -> story
@@ -85,7 +85,7 @@ defmodule ZMexTest.Utils do
       load_story(story_file)
     rescue
       _error in RuntimeError ->
-        story_path = Path.join("stories", story_file)
+        story_path = Path.join("native/encrusted_nif/encrusted-heart/tests", story_file)
         bold = &IO.ANSI.format([:bright, &1])
         underline = &IO.ANSI.format([:underline, &1])
 

@@ -34,4 +34,4 @@ elixir-loop: # play a story using Elixir CLI
 
 rust: # play a story using Rust NIF
 	cd encrusted_cli
-	RUST_BACKTRACE=1 cargo run -q -- ../stories/$(1) $(@:2)
+	RUST_BACKTRACE=1 cargo run -q -- ../native/encrusted_nif/encrusted-heart/tests/$(1) $(@:2)
