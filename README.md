@@ -54,7 +54,7 @@ These three values were returned from `Zmex.new_game`
   to unsigned ints when passed to the internal Z-machine in Rust).
 
 ```elixir
-iex> {save, output, seed} = Zmex.continue(story, save, "n", seed)
+iex> {save, output, seed} = Zmex.continue(story, save, "n", seed: seed)
 
 {{<<70, 79, 82, 77, 0, 0, 1, 8, 73, 70, 90, 83, 73, 70, 104, ... 255, 0, 255>>,
  "ADVENTURE\nA Modern Classic\nBased on Adventure by Willie Crowther and Don Woods (1977)\nAnd prior adaptations by David M. Baggett (1993), Graham Nelson (1994), and others\nAdapted once more by Jesse McGrew (2015)\nRelease 1 / Serial number 151001 / ZILF 0.7 lib J3\n\nAt End Of Road\nYou are standing at the end of a road before a small brick building. Around you is a forest. A small stream flows out of the building and down a gully.",
@@ -64,7 +64,7 @@ iex> {save, output, seed} = Zmex.continue(story, save, "n", seed)
 It should be reasonably clear where this is going:
 
 ```elixir
-iex> {save, output, seed} = Zmex.continue(story, save, "north", seed)
+iex> {save, output, seed} = Zmex.continue(story, save, "north", seed: seed)
 
 {<<70, 79, 82, 77, 0, 0, 1, 52, 73, 70, 90, 83, 73, 70, 104, ... 255, 0, 255>>,
  "In Forest\nYou are in open forest near both a valley and a road.",
