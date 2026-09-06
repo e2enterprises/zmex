@@ -2,7 +2,7 @@ defmodule Zmex.MixProject do
   use Mix.Project
 
   @name "Zmex"
-  @version "0.1.0"
+  @version "0.1.1"
   @repository "https://github.com/e2enterprises/zmex"
 
   defp description() do
@@ -31,8 +31,27 @@ defmodule Zmex.MixProject do
     [
       maintainers: ["Evan Campbell Purcer"],
       licenses: ["MIT"],
-      links: %{"GitHub" => @repository}
+      links: %{"GitHub" => @repository},
+      files:
+        default_files() ++
+          [
+            "native/encrusted_nif/Cargo.toml",
+            "native/encrusted_nif/Cargo.lock",
+            "native/encrusted_nif/src",
+            "native/encrusted_nif/encrusted-heart/Cargo.toml",
+            "native/encrusted_nif/encrusted-heart/Cargo.lock",
+            "native/encrusted_nif/encrusted-heart/src",
+            "native/encrusted_nif/encrusted-heart/tests/advent.z3",
+            "native/encrusted_nif/encrusted-heart/LICENSE"
+          ]
+      # Extend default :files list to include Rust source code necessary
+      # to build Encrusted Heart NIFs.
     ]
+  end
+
+  def default_files() do
+    # From Hex.Package: https://github.com/hexpm/hex/blob/main/lib/hex/package.ex#L4
+    ~w(lib priv .formatter.exs mix.exs README* LICENSE*)
   end
 
   defp docs() do

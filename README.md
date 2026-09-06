@@ -8,7 +8,7 @@ Call a Rust Z-Machine from Elixir and run classic text-adventure games
 
 ## Installation
 
-Add `{:zmex, "~> 0.1.0"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
+Add `{:zmex, "~> 0.1.1"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
 
 ## Usage
 
@@ -28,9 +28,11 @@ iex> {save, output, seed} = Zmex.new_game(story)
  {-236729853, 1784278710, 2078833209, 1610991913}}
 ```
 
-You've just started a new game of adventure. The raw "UI" isn't as cozy a gameplay
-experience as we'd usually like, but it gives you everything you need to build your
-own Elixir applications around this Rust Z-machine implementation.
+You've just started a new game of [Adventure](https://dwheeler.com/adventure/).
+The raw "UI" isn't as cozy a gameplay experience as we'd usually like, but it
+provides everything you need to build your own Elixir applications around the
+["Encrusted Heart"](https://github.com/bkirwi/folly/tree/master/encrusted-heart)
+Z-machine implementation.
 
 These three values were returned from `Zmex.new_game`
 - **`save`**: The call to `Zmex.new_game` produced binary-data representation of the
@@ -82,7 +84,7 @@ git clone git@github.com:e2enterprises/zmex.git
 then run
 ```sh
 cd zmex
-mix play advent.z3  # Play the classic: https://dwheeler.com/adventure/
+mix play advent.z3  # Play the classic: https://rickadams.org/adventure/
 # Run following command to view other story files you may select from:
 # ls native/encrusted_nif/encrusted-heart/tests/
 ```
@@ -99,22 +101,27 @@ A natural critique of this approach is that starting up an entire Z-machine inst
 fresh during every step of gameplay seems wasteful. Indeed, interacting with a
 persistently-running Z-machine instance would likely be a more optimal use of
 resources, but it would come at a cost: simplicity, and natural integration with
-OTP and the BEAM, Elixir's (and Erlang's) much-beloved runtime. My belief is that a
-stateless, lightweight Z-machine will elegantly integrate with the BEAM's concurrency
-primitives and ultimately make applications built with Zmex more reliable,
-scalable, and joyful to work on.
+OTP and the BEAM, Elixir's (and Erlang's) much-beloved runtime. BEAM and state are
+oil and water; what goes with the flow is work that can be split into many small
+pieces and spread across many independent workers. Thanks to the raw performance of
+Rust, and the elegant bridge to it provided by
+[Rustler](https://github.com/rusterlium/rustler), working with a Z-machine in a way
+that fits this ideal interaction model is now possible in Elixir.
 
-The Rust Z-machine implementation that Zmex relies on is a boon in light of the above.
 Great pains have been taken to ensure that all NIFs called by Zmex return in under
 1ms, a threshold that allows them to avoid being scheduled as
 ["dirty"](https://www.erlang.org/doc/apps/erts/erl_nif.html#dirty_nifs)
-and incur related performance penalties. While developing applications with Zmex,
+and incur performance penalties. While developing applications with Zmex,
 please make your own performance measurements by passing `diagnostics: true` to any
 Zmex call, which will provide detailed per-NIF timing information. It's impossible
 to predict exact timing behavior with every possible Inform game in real-world
 scenarios; marking NIFs as
 ["dirty"](https://www.erlang.org/doc/apps/erts/erl_nif.html#dirty_nifs)
 will provide a fallback in cases where execution times exceed the 1ms threshold.
+
+> #### 🚧　NOTE　🚧
+>
+> **Configurable NIF scheduling strategy is not yet implemented, but on roadmap.**
 
 Zmex internally relies on [Folly's](https://github.com/bkirwi/folly) implementation
 of a Z-machine in Rust,
