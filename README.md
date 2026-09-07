@@ -44,14 +44,20 @@ These three values were returned from `Zmex.new_game`
   responding to user input, but in the case of `Zmex.new_game` input can
   be blank and output generally contains the "title-page" or "intro" text
   of the game being played. Only way to know for sure is to play the game!
-- **`seed`**: Every play-through of a Z-machine game uses a random seed (or seeds) to
-  keep certain instances of randomness deterministic and fair across many steps of the
-  game. Generally you'll want to hang on to the seed produced during `Zmex.new_game`
+- **`seed`**: Every play-through of a Z-machine game continually passes a seed value
+  to the Z-machine's internal random number generator (RNG). Generally you'll want
+  to hang on to the seed produced during `Zmex.new_game`
   and pass that same seed with every subsequent `Zmex.continue` call. Changing seed
-  mid-way won't cause any egregious issues, but it has the potential to make
-  the game behave strangely. The seed always consists of a 4-tuple containing
-  four random 32-bit integers (signed, in Elixir, though they are translated
-  to unsigned ints when passed to the internal Z-machine in Rust).
+  midway during a game won't cause egregious errors, but has the potential to cause
+  subtler issues; see
+  [The Z-machine, And How To Emulate It (PDF)](https://mirror.ifarchive.org/if-archive/infocom/interpreters/specification/zspec02/zmach06e.pdf)
+  for more context, specifically section **_2.6. Random number generator_**.
+  Ultimately, how you handle RNG seeds is up to you and your application's specific
+  needs; Zmex simply aims to make this aspect of Z-machine operation transparent and
+  straightforward to work with.
+  - Per the Z-machine impl. Zmex uses, the seed is always a 4-tuple of uniformly
+    random **32-bit _signed_ integers** (though they're converted to unsigned
+    ints when passed to Z-machine during NIF execution).
 
 ```elixir
 iex[3]> {save, output, seed} = Zmex.continue(story, save, "n", seed: seed)
