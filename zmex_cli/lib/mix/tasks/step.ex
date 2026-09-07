@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Play do
+defmodule Mix.Tasks.Step do
   use Mix.Task
 
   def run(argv) do

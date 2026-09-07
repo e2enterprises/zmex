@@ -31,7 +31,7 @@ iex[2]> {save, output, seed} = Zmex.new_game(story)
 You've just started a new game of [Adventure](https://dwheeler.com/adventure/).
 The raw "UI" isn't as cozy a gameplay experience as we'd usually like, but it
 provides everything you need to build your own Elixir applications around the
-["Encrusted Heart"](https://github.com/bkirwi/folly/tree/master/encrusted-heart)
+"[Encrusted Heart](https://github.com/bkirwi/folly/tree/master/encrusted-heart)"
 Z-machine implementation.
 
 These three values were returned from `Zmex.new_game`
@@ -89,11 +89,55 @@ git clone git@github.com:e2enterprises/zmex.git
 ```
 then run
 ```sh
-cd zmex
-mix play advent.z3  # Play the classic: https://rickadams.org/adventure/
+cd zmex/zmex_cli
+mix loop advent.z3  # Play the classic: https://rickadams.org/adventure/
 # Run following command to view other story files you may select from:
 # ls native/encrusted_nif/encrusted-heart/tests/
 ```
+The above command puts the CLI program into a simple input<>response loop. To help
+the program serve as blueprint, it's been intentionally pared-down as far as possible;
+basic quality-of-life features such as the following are left as an exercise
+to the reader:
+- left/right arrow keys to navigate around and edit text on the prompt line
+- up/down arrow keys to browse and re-enter previous inputs
+- any sort of multi-line input
+- any way to manually save or load a game, or keep multiple saves
+- any way to quit, other then pressing `CTRL+C` twice in a row
+- many other things that would probably be fun to implement!
+
+If you prefer to run a single game step at a time instead of looping, use the `step`
+command instead:
+
+```sh
+mix step advent.z3
+```
+Both commands will read from and write to the same save file, meaning they'll both
+interact with the same game session. To restart the game, you can either delete this
+game save file or run
+```sh
+mix step --reset advent.z3
+# or
+mix loop --reset advent.z3
+```
+The game save file for this example program is always stored adjacent to the story
+file, which in the examples above resides at
+```sh
+zmex/native/encrusted_nif/encrusted-heart/tests/advent.z3
+```
+The save file the example program produces is always called
+```sh
+zmex/native/encrusted_nif/encrusted-heart/tests/advent_save.qz
+# .qz refers to the "Quetzal" save format: https://www.ifwiki.org/Quetzal
+```
+which means there can only be a single session of each game running, with a single
+save point, at any given time. Any real-world program beyond this simple example
+will likely want to provide an intuitive system for managing any number of session
+and saves for each game, but this is fully outside the purview of Zmex. This library
+is intended to provide you with direct access to the binary data reprensenting game
+saves, and even the act of writing to file or persisting somewhere else is left as
+a choice you are able to make. In the case of the example `zmex_cli`, it simply
+writes the data directly to a file.
+
 
 ## Implementation Notes
 
@@ -108,7 +152,7 @@ fresh during every step of gameplay seems wasteful. Indeed, interacting with a
 persistently-running Z-machine instance would likely be a more optimal use of
 resources, but it would come at a cost: simplicity, and natural integration with
 OTP and the BEAM, Elixir's (and Erlang's) much-beloved runtime. BEAM and state are
-oil and water; what goes with the flow is work that can be split into many small
+oil and water; what goes with the flow is work that can be split into small
 pieces and spread across many independent workers. Thanks to the raw performance of
 Rust, and the elegant bridge to it provided by
 [Rustler](https://github.com/rusterlium/rustler), working with a Z-machine in a way
@@ -125,7 +169,7 @@ scenarios; marking NIFs as
 ["dirty"](https://www.erlang.org/doc/apps/erts/erl_nif.html#dirty_nifs)
 will provide a fallback in cases where execution times exceed the 1ms threshold.
 
-> #### 🚧　NOTE　🚧
+> #### Warning {: .warning}
 >
 > **Configurable NIF scheduling strategy is not yet implemented, but on roadmap.**
 
