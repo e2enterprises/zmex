@@ -5,7 +5,7 @@ build: install # build zmex
 	mix compile --force
 
 clean: # remove dependencies and build files
-	rm -rf _build deps priv
+	rm -rf _build deps priv doc
 	rm native/encrusted_nif/encrusted-heart/tests/anchor.z8 # tmp file added by tests
 
 docs: build # build docs site
@@ -15,6 +15,9 @@ read: docs # open the docs site after building
 	open doc/index.html
 
 test: build # run zmex tests
+	mix test $(@)
+
+test-clean: clean build # run zmex tests after full reset (useful to resolve issues)
 	mix test $(@)
 
 build-elixir-release:
