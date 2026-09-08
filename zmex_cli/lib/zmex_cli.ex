@@ -25,7 +25,7 @@ defmodule ZmexCli do
     |> Enum.join(" -> ")
   end
 
-  def loop(argv \\ nil) do
+  def loop(argv \\ []) do
     args =
       OptionParser.parse!(
         argv || System.argv(),
@@ -51,7 +51,7 @@ defmodule ZmexCli do
     loop(new_args_without_reset)
   end
 
-  def main(argv \\ nil) do
+  def main(argv \\ []) do
     argv || System.argv()
 
     args =
@@ -158,7 +158,7 @@ defmodule ZmexCli do
 
           {new_save, output, seed, nil}
 
-        !!verbose ->
+        true ->
           Zmex.continue(story, save, input_str,
             seed: seed,
             step_through_blank: true,

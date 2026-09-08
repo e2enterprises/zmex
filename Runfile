@@ -30,7 +30,7 @@ elixir-release:
 
 elixir: # play a story using Elixir CLI
 	cd zmex_cli
-	mix play $(@)
+	mix step $(@)
 
 elixir-loop: # play a story using Elixir CLI
 	cd zmex_cli
