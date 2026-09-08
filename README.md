@@ -3,12 +3,48 @@
 <!-- @moduledoc Zmex -->
 
 _**IF by NIF:**
-Call a Rust Z-Machine from Elixir and run classic text-adventure games
+Call [a Rust Z-Machine](https://github.com/bkirwi/folly/tree/master/encrusted-heart)
+from Elixir and run classic text-adventure games
 (Inform v3, v4, v5, v8)_
 
 ## Installation
 
 Add `{:zmex, "~> 0.1.1"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
+
+## Cheat Sheet
+
+```elixir
+Zmex.new_game/1 (story) -> {save, output, seed}
+Zmex.new_game/2 (story, input) -> {save, output, seed}
+Zmex.new_game/2 (story, inputs) -> {save, output, seed}
+Zmex.new_game/3 (story, input, opts) -> {save, output, seed, diagnostics}
+Zmex.new_game/3 (story, inputs, opts) -> {save, output, seed, diagnostics}
+Zmex.continue/3 (story, save, input) -> {save, output, seed}
+Zmex.continue/3 (story, save, inputs) -> {save, output, seed}
+Zmex.continue/4 (story, save, input, opts) -> {save, output, seed, diagnostics}
+Zmex.continue/4 (story, save, inputs, opts) -> {save, output, seed, diagnostics}
+
+Parameters
+----------
+story # · · · · · · · · · · · · · non-empty binary
+save  # · · · · · · · · · · · · · non-empty binary
+"" <> input # · · · · · · · · · · string (may be blank)
+[first_input | rest_inputs] # · · non-empty list of strings
+opts \\ []  # · · · · · · · · · · optional keyword list of options
+   L seed: {i32, i32, i32, i32} # random seed for deterministic story behavior
+   L step_through_blank: true # · auto-step through steps in story with no output
+   L diagnostics: true  # · · · · return diagnostic info map as 3rd tuple value
+   L dirty_nifs: [] # · · · · · · list of atoms corresponding with NIF functions
+                                # to be marked with schedule="DirtyCpu" for Rustler
+
+Return Tuples
+-------------
+diagnostics: false ->
+  {save: binary, output: str, seed: {i32, i32, i32, i32} }
+diagnostics: true ->
+  {save: binary, output: str, seed: {i32 x 4}, diagostics: %{nif_duration: i32} }
+# Note: NIF diagnostic timing durations are always returned in milliseconds.
+```
 
 ## Usage
 
