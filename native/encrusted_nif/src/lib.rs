@@ -184,4 +184,132 @@ fn save_zmachine_state(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
     // }
 }
 
+/// BELOW ARE "dirtyCpu" EXACT COPIES OF ALL NIF FUNCTIONS ABOVE ///
+
+#[rustler::nif]
+fn generate_zmachine_random_seed_dirty_cpu() -> NifResult<(i32, i32, i32, i32)> {
+    Ok((
+        rand::random(),
+        rand::random(),
+        rand::random(),
+        rand::random(),
+    ))
+}
+
+/// Creates a _mutable_ NIF resource containing a full Z-machine instance.
+#[rustler::nif(schedule = "DirtyCpu")]
+fn init_zmachine_dirty_cpu<'a>(
+    story_binary: Binary<'a>,
+    save_binary: Binary<'a>,
+    seed_a: i32,
+    seed_b: i32,
+    seed_c: i32,
+    seed_d: i32,
+) -> ResourceArc<ZmachineResource> {
+    let mut opts = Options::default();
+
+    opts.rand_seed = [
+        // convert 32-bit signed ints from Elixir to Rust unsigned 32-bit ints:
+        (seed_a + i32::MAX) as u32,
+        (seed_b + i32::MAX) as u32,
+        (seed_c + i32::MAX) as u32,
+        (seed_d + i32::MAX) as u32,
+    ];
+
+    let mut zmachine = Zmachine::new(story_binary.to_vec(), BaseUI::new(), opts);
+
+    if save_binary.len() > 0 {
+        zmachine.load_savestate(&save_binary);
+        // Note: zmachine.restore panics here; zmachine.load_savestate works instead.
+    }
+
+    ZmachineResource {
+        zmachine_mutex: Mutex::new(zmachine),
+    }
+    .into()
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn step_zmachine_dirty_cpu(arc: ResourceArc<ZmachineResource>) -> String {
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
+
+    let step = match zmachine.step() {
+        Step::ReadLine => "ReadLine".to_owned(),
+        Step::ReadChar => "ReadChar".to_owned(),
+        Step::Save(_) => "Save".to_owned(),
+        Step::Restore => "Restore".to_owned(),
+        Step::Done => "Done".to_owned(),
+    };
+
+    step
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn send_line_to_zmachine_dirty_cpu(
+    arc: ResourceArc<ZmachineResource>,
+    input: String,
+) -> NifResult<()> {
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
+
+    zmachine.handle_input(input);
+
+    Ok(())
+}
+
+/// Creates an _immutable_ NIF resource containing a full Z-machine instance.
+#[rustler::nif(schedule = "DirtyCpu")]
+fn compute_zmachine_unicode_table_dirty_cpu(
+    arc: ResourceArc<ZmachineResource>,
+) -> ResourceArc<ZmachineUnicodeTableResource> {
+    let zmachine = arc.zmachine_mutex.lock().unwrap();
+
+    ZmachineUnicodeTableResource {
+        unicode_table: zmachine.unicode_table().to_vec()
+    }.into()
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn send_char_to_zmachine_dirty_cpu(
+    zmachine_arc: ResourceArc<ZmachineResource>,
+    input: String,
+    unicode_table_arc: ResourceArc<ZmachineUnicodeTableResource>,
+) -> NifResult<()> {
+    let mut zmachine = zmachine_arc.zmachine_mutex.lock().unwrap();
+    let unicode_table = &unicode_table_arc.unicode_table;
+
+    zmachine.handle_read_char(
+        ZChar::from_char(
+            if input.chars().count() == 0 {
+                ' ' // If there is no input, just send a blank string.
+            } else {
+                input.chars().next().unwrap()
+            },
+            unicode_table,
+        )
+        .unwrap(),
+    );
+
+    Ok(())
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn drain_zmachine_output_dirty_cpu(arc: ResourceArc<ZmachineResource>) -> String {
+    let mut zmachine = arc.zmachine_mutex.lock().unwrap();
+    let mut output = String::new();
+
+    for BaseOutput { style: _, content } in zmachine.ui.drain_output() {
+        output.push_str(&content);
+    }
+
+    output
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn save_zmachine_state_dirty_cpu(arc: ResourceArc<ZmachineResource>) -> Vec<u8> {
+    let zmachine = arc.zmachine_mutex.lock().unwrap();
+    let save_binary = zmachine.get_save();
+
+    save_binary
+}
+
 rustler::init!("Elixir.Zmex.EncrustedNif");
