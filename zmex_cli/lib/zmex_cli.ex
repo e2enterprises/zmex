@@ -29,8 +29,14 @@ defmodule ZmexCli do
     args =
       OptionParser.parse!(
         argv || System.argv(),
-        switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :boolean],
-        aliases: [R: :reset, s: :seed, h: :help, V: :verbose]
+        switches: [
+          reset: :boolean,
+          seed: :string,
+          help: :boolean,
+          verbose: :boolean,
+          diagnostics: :boolean
+        ],
+        aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
       )
 
     {options, [story_file | _input]} = args
@@ -57,8 +63,14 @@ defmodule ZmexCli do
     args =
       OptionParser.parse!(
         argv,
-        switches: [reset: :boolean, seed: :string, help: :boolean, verbose: :boolean],
-        aliases: [R: :reset, s: :seed, h: :help, V: :verbose]
+        switches: [
+          reset: :boolean,
+          seed: :string,
+          help: :boolean,
+          verbose: :boolean,
+          diagnostics: :boolean
+        ],
+        aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
       )
 
     {options, [story_file | input]} = args
@@ -66,7 +78,8 @@ defmodule ZmexCli do
     reset = Keyword.get(options, :reset, false)
     seed = Keyword.get(options, :seed, nil)
     help = Keyword.get(options, :help, false)
-    verbose = Keyword.get(options, :verbose, false)
+    diagnostics = Keyword.get(options, :diagnostics, false)
+    verbose = Keyword.get(options, :verbose, diagnostics)
 
     story_path = Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
 
