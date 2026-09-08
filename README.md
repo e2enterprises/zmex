@@ -36,9 +36,10 @@ Return Tuples
 diagnostics: false ->
   {save: binary, output: str, seed: {i32, i32, i32, i32} }
 diagnostics: true ->
-  {save: binary, output: str, seed: {i32 x 4}, diagostics: %{nif_duration: i32} }
-  # Note: NIF diagnostic timing durations are always returned in milliseconds.
+  {save: binary, output: str, seed: {i32, i32, i32, i32}, diagostics: %Diagnostics{} }
 ```
+> [!TIP]
+> See [Diagnostics](#diagnostics-section) for detailed information about `%Diagnostics{}` struct.
 
 ## Usage
 
@@ -168,6 +169,13 @@ saves, and even the act of writing to file or persisting somewhere else is left 
 a choice you are able to make. In the case of the example `zmex_cli`, it simply
 writes the data directly to a file.
 
+<div id="diagnostics-section">
+    <!--TODO: figure out markdown section linking that works on Github and Hexdocs -->
+</div>
+
+## Diagnostics
+
+TODO
 
 ## Implementation Notes
 

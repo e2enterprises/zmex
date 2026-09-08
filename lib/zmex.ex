@@ -100,8 +100,7 @@ defmodule Zmex do
   # diagnostics: false ->
   #   {save: binary, output: str, seed: {i32, i32, i32, i32} }
   # diagnostics: true ->
-  #   {save: binary, output: str, seed: {i32 x 4}, diagostics: %{nif_duration: i32} }
-  # Note: NIF diagnostic timing durations are always returned in milliseconds.
+  #   {save: binary, output: str, seed: {i32 x 4}, diagostics: %Diagnostics{} }
 
   # new_game/1 [story: binary]
   def new_game(story), do: new_game(story, "")
