@@ -76,12 +76,19 @@ defmodule Zmex do
   @dialyzer {:no_return, send_zmachine_inputs: 6}
   @dialyzer {:no_return, send_zmachine_inputs_with_diagnostics: 6}
 
+  # Public API
+  # ----------
+  # Zmex.new_game/1 (story) -> {save, output, seed}
+  # Zmex.new_game/2 (story, input) -> {save, output, seed}
+  # Zmex.new_game/3 (story, input, opts) -> {save, output, seed, diagnostics}
+  # Zmex.continue/3 (story, save, input) -> {save, output, seed}
+  # Zmex.continue/4 (story, save, input, opts) -> {save, output, seed, diagnostics}
+  #
   # Parameters
   # ----------
   # story · · · · · · · · · · · · · non-empty binary
   # save  · · · · · · · · · · · · · non-empty binary
-  # "" <> input · · · · · · · · · · string (may be blank)
-  # [first_input | rest_inputs] · · non-empty list of strings
+  # input | inputs  · · · · · · · · string or non-empty list of strings
   # opts \\ []  · · · · · · · · · · optional keyword list of options
   #    L seed: nil  · · · · · · · · random seed for deterministic story behavior
   #    L step_through_blank: true · auto-step through steps in story with no output
@@ -95,18 +102,6 @@ defmodule Zmex do
   # diagnostics: true ->
   #   {save: binary, output: str, seed: {i32 x 4}, diagostics: %{nif_duration: i32} }
   # Note: NIF diagnostic timing durations are always returned in milliseconds.
-  #
-  # Public API
-  # ----------
-  # new_game/1 [story] -> {save, output, seed}
-  # new_game/2 [story, input] -> {save, output, seed}
-  # new_game/2 [story, inputs] -> {save, output, seed}
-  # new_game/3 [story, input, opts] -> {save, output, seed, diagnostics}
-  # new_game/3 [story, inputs, opts] -> {save, output, seed, diagnostics}
-  # continue/3 [story, save, input] -> {save, output, seed}
-  # continue/3 [story, save, inputs] -> {save, output, seed}
-  # continue/4 [story, save, input, opts] -> {save, output, seed, diagnostics}
-  # continue/4 [story, save, inputs, opts] -> {save, output, seed, diagnostics}
 
   # new_game/1 [story: binary]
   def new_game(story), do: new_game(story, "")
