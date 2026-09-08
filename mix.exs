@@ -68,7 +68,8 @@ defmodule Zmex.MixProject do
     [
       {:rustler, "~> 0.38.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
-      {:dry_doc, "~> 0.1.2"}
+      {:dry_doc, "~> 0.1.2"},
+      {:dialyxir, "~> 1.4.8", only: [:dev, :test], runtime: false}
     ]
   end
 
