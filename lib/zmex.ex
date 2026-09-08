@@ -607,28 +607,149 @@ defmodule Zmex do
     seed = {seed_a, seed_b, seed_c, seed_d}
 
     diagnostics = %{
-      seed_nif: [{seed_nif_microsec / 1000, input, output, seed}],
-      init_nif: [{init_nif_microsec / 1000, input, output, zmachine}],
-      step_1_nif: [{step_1_nif_microsec / 1000, input, output, step_1}],
-      send_line_nif: [{nil, input, output, {}}],
-      send_char_nif: [{nil, input, output, {}}],
-      unicode_table_nif: [{nil, input, output, nil}],
-      step_2_nif: [{step_2_nif_microsec / 1000, input, output, step_2}],
-      output_nif: [{output_nif_microsec / 1000, input, output, output}],
-      save_nif: [{save_nif_microsec / 1000, input, output, save}]
+      seed_nif: [
+        {
+          :generate_zmachine_random_seed,
+          :generate_zmachine_random_seed in dirty_nifs,
+          true,
+          seed_nif_microsec / 1000,
+          input,
+          output,
+          seed
+        }
+      ],
+      init_nif: [
+        {
+          :init_zmachine,
+          :init_zmachine in dirty_nifs,
+          true,
+          init_nif_microsec / 1000,
+          input,
+          output,
+          zmachine
+        }
+      ],
+      step_1_nif: [
+        {
+          :step_zmachine,
+          :step_zmachine in dirty_nifs,
+          true,
+          step_1_nif_microsec / 1000,
+          input,
+          output,
+          step_1
+        }
+      ],
+      send_line_nif: [
+        {
+          :send_line_to_zmachine,
+          false,
+          false,
+          nil,
+          input,
+          output,
+          {}
+        }
+      ],
+      send_char_nif: [
+        {
+          :send_char_to_zmachine,
+          :send_char_to_zmachine in dirty_nifs,
+          false,
+          nil,
+          input,
+          output,
+          {}
+        }
+      ],
+      unicode_table_nif: [
+        {
+          :compute_zmachine_unicode_table,
+          :compute_zmachine_unicode_table in dirty_nifs,
+          false,
+          nil,
+          input,
+          output,
+          nil
+        }
+      ],
+      step_2_nif: [
+        {
+          :step_zmachine,
+          :step_zmachine in dirty_nifs,
+          true,
+          step_2_nif_microsec / 1000,
+          input,
+          output,
+          step_2
+        }
+      ],
+      output_nif: [
+        {
+          :drain_zmachine_output,
+          :drain_zmachine_output in dirty_nifs,
+          true,
+          output_nif_microsec / 1000,
+          input,
+          output,
+          output
+        }
+      ],
+      save_nif: [
+        {
+          :save_zmachine_state,
+          :save_zmachine_state in dirty_nifs,
+          true,
+          save_nif_microsec / 1000,
+          input,
+          output,
+          save
+        }
+      ]
     }
 
     diagnostics =
       case step_1 do
         "ReadLine" ->
-          %{diagnostics | send_line_nif: [{send_nif_microsec / 1000, input, output, {}}]}
+          %{
+            diagnostics
+            | send_line_nif: [
+                {
+                  :send_line_to_zmachine,
+                  :send_line_to_zmachine in dirty_nifs,
+                  true,
+                  send_nif_microsec / 1000,
+                  input,
+                  output,
+                  {}
+                }
+              ]
+          }
 
         "ReadChar" ->
           %{
             diagnostics
-            | send_char_nif: [{send_nif_microsec / 1000, input, output, {}}],
+            | send_char_nif: [
+                {
+                  :send_char_to_zmachine,
+                  :send_char_to_zmachine in dirty_nifs,
+                  true,
+                  send_nif_microsec / 1000,
+                  input,
+                  output,
+                  {}
+                }
+              ],
               unicode_table_nif: [
-                {unicode_table_nif_microsec / 1000, input, output, unicode_table}
+                {
+                  :compute_zmachine_unicode_table,
+                  :compute_zmachine_unicode_table in dirty_nifs,
+                  true,
+                  unicode_table_nif_microsec / 1000,
+                  input,
+                  output,
+                  unicode_table
+                }
               ]
           }
 

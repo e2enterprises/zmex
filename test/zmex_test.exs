@@ -138,7 +138,10 @@ defmodule ZmexTest.Utils do
 
         for list <- Map.values(diagnostics) do
           for record <- list do
-            {duration, input, output, _result} = record
+            {nif, dirty?, called?, duration, input, output, _result} = record
+            assert is_atom(nif)
+            assert is_boolean(dirty?)
+            assert is_boolean(called?)
             assert is_number(duration) or duration == nil
             assert duration >= 0
             assert is_binary(input)

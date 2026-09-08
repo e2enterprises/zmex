@@ -13,13 +13,22 @@ defmodule ZmexCli do
 
   def format_nif_diagnostic_records(records) do
     records
-    |> Stream.map(fn {duration, _input, _output, _result} -> duration end)
-    |> Stream.filter(&(&1 != nil))
-    |> Stream.map(fn duration ->
+    |> Stream.map(fn {nif, dirty?, called?, duration, _input, _output, _result} ->
+      {nif, dirty?, called?, duration}
+    end)
+    |> Stream.filter(fn {_nif, _dirty?, called?, _duration} -> called? end)
+    |> Stream.map(fn {nif, dirty?, _called?, duration} ->
+      dirty =
+        if dirty? do
+          "_dirty_cpu"
+        else
+          ""
+        end
+
       if duration <= 1 do
-        "#{duration}ms ✔"
+        "#{duration}ms ✔ #{nif}#{dirty}"
       else
-        "#{duration}ms"
+        "#{duration}ms #{nif}#{dirty}"
       end
     end)
     |> Enum.join(" -> ")
@@ -34,7 +43,8 @@ defmodule ZmexCli do
           seed: :string,
           help: :boolean,
           verbose: :boolean,
-          diagnostics: :boolean
+          diagnostics: :boolean,
+          dirtynifs: :string
         ],
         aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
       )
@@ -68,7 +78,8 @@ defmodule ZmexCli do
           seed: :string,
           help: :boolean,
           verbose: :boolean,
-          diagnostics: :boolean
+          diagnostics: :boolean,
+          dirtynifs: :string
         ],
         aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
       )
@@ -80,6 +91,9 @@ defmodule ZmexCli do
     help = Keyword.get(options, :help, false)
     diagnostics = Keyword.get(options, :diagnostics, false)
     verbose = Keyword.get(options, :verbose, diagnostics)
+    dirty_nifs = Keyword.get(options, :dirtynifs, "")
+
+    dirty_nifs = dirty_nifs |> String.split(",") |> Enum.map(&String.to_atom/1)
 
     story_path = Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
 
@@ -150,7 +164,8 @@ defmodule ZmexCli do
           {new_save, output, seed} =
             Zmex.new_game(story, input_str,
               seed: seed,
-              step_through_blank: true
+              step_through_blank: true,
+              dirty_nifs: dirty_nifs
             )
 
           {new_save, output, seed, nil}
@@ -159,14 +174,16 @@ defmodule ZmexCli do
           Zmex.new_game(story, input_str,
             seed: seed,
             step_through_blank: true,
-            diagnostics: true
+            diagnostics: true,
+            dirty_nifs: dirty_nifs
           )
 
         !verbose ->
           {new_save, output, seed} =
             Zmex.continue(story, save, input_str,
               seed: seed,
-              step_through_blank: true
+              step_through_blank: true,
+              dirty_nifs: dirty_nifs
             )
 
           {new_save, output, seed, nil}
@@ -175,7 +192,8 @@ defmodule ZmexCli do
           Zmex.continue(story, save, input_str,
             seed: seed,
             step_through_blank: true,
-            diagnostics: true
+            diagnostics: true,
+            dirty_nifs: dirty_nifs
           )
       end
 
