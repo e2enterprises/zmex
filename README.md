@@ -7,6 +7,14 @@ Call [a Rust Z-Machine](https://github.com/bkirwi/folly/tree/master/encrusted-he
 from Elixir and run classic text-adventure games
 (Inform v3, v4, v5, v8)_
 
+[![tests](https://github.com/e2enterprises/zmex/workflows/tests/badge.svg)](https://github.com/e2enterprises/zmex/actions)
+[![format](https://github.com/e2enterprises/zmex/workflows/format/badge.svg)](https://github.com/e2enterprises/zmex/actions)
+[![dialyzer](https://github.com/e2enterprises/zmex/workflows/dialyzer/badge.svg)](https://github.com/e2enterprises/zmex/actions)
+[![latest release](https://img.shields.io/github/release/e2enterprises/zmex.svg)](https://github.com/e2enterprises/zmex/releases/latest)
+[![license](https://img.shields.io/github/license/e2enterprises/zmex.svg?color=blue)](https://github.com/e2enterprises/zmex/blob/master/LICENSE)
+[![create don't generate](https://raw.githubusercontent.com/e2enterprises/zmex/refs/heads/main/priv/static/images/create-dont-generate.svg)](https://createdontgenerate.com)
+<!-- [![0% generated | 100% created](https://img.shields.io/badge/0%25_generated-100%25_created-purple)](https://createdontgenerate.com) -->
+
 ## Installation
 
 Add `{:zmex, "~> 0.1.1"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
@@ -38,8 +46,9 @@ diagnostics: false ->
 diagnostics: true ->
   {save: binary, output: str, seed: {i32, i32, i32, i32}, diagostics: %Diagnostics{} }
 ```
+
 > [!TIP]
-> See [Diagnostics](#diagnostics-section) for detailed information about `%Diagnostics{}` struct.
+> See [Diagnostics](#diagnostics-section) for detailed information about the `%Diagnostics{}` struct.
 
 ## Usage
 
