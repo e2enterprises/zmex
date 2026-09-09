@@ -15,6 +15,12 @@ from Elixir and run classic text-adventure games
 [![create don't generate](https://raw.githubusercontent.com/e2enterprises/zmex/refs/heads/main/priv/static/images/create-dont-generate.svg)](https://createdontgenerate.com)
 <!-- [![0% generated | 100% created](https://img.shields.io/badge/0%25_generated-100%25_created-purple)](https://createdontgenerate.com) -->
 
+<!-- /@moduledoc Zmex -->
+
+**Contents** - [Installation](https://github.com/e2enterprises/zmex#installation) | [Reference Sheet](https://github.com/e2enterprises/zmex#reference-sheet) | [Usage](https://github.com/e2enterprises/zmex#usage) | [Example Application](https://github.com/e2enterprises/zmex#example-application) | [Diagnostics](https://github.com/e2enterprises/zmex#diagnostics) | [Implementation Notes](https://github.com/e2enterprises/zmex#implementation-notes)
+
+<!-- @moduledoc Zmex -->
+
 ## Installation
 
 Add `{:zmex, "~> 0.1.1"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
@@ -56,7 +62,7 @@ The easiest way to understand how to use `zmex` to run Z-Machine games within yo
 Elixir programs is to experiment with the library in Elixir's REPL, `iex`:
 
 ```elixir
-$ iex -S mix  # run from root directory of project where you installed Zmex
+iex -S mix  # run from root directory of project where you installed Zmex
 
 iex[1]> story = File.read!("deps/zmex/native/encrusted_nif/encrusted-heart/tests/advent.z3")
 # `story` is binary data read from any Inform file (Inform v3, v4, v5, v8 supported)
@@ -130,7 +136,9 @@ git clone git@github.com:e2enterprises/zmex.git
 then run
 ```sh
 cd zmex/zmex_cli
+mix deps.get
 mix loop advent.z3  # Play the classic: https://rickadams.org/adventure/
+
 # Run following command to view other story files you may select from:
 # ls native/encrusted_nif/encrusted-heart/tests/
 ```
