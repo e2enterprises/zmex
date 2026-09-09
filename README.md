@@ -36,7 +36,7 @@ input # · · · · · · · · · · · · · · string or non-empty list of st
 opts \\ []  # · · · · · · · · · · · optional keyword list of options
    L seed: {i32, i32, i32, i32} # · random seed for deterministic story behavior
    L step_through_blank: true   # · auto-step through steps in story with no output
-   L diagnostics: true  # · · · · · return diagnostic info map as 3rd tuple value
+   L diagnostics: false # · · · · · return diagnostic info map as 3rd tuple value
    L dirty_nifs: []     # · · · · · list of atoms corresponding with NIF functions
                                 # · to be marked with schedule="DirtyCpu" for Rustler
 Return Tuples
