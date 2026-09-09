@@ -123,6 +123,8 @@ defmodule ZmexTest.Utils do
 
   defp assert_valid_diagnostics(diagnostics?, diagnostics) do
     if diagnostics? do
+      diagnostics = Map.from_struct(diagnostics)
+
       for key <- [
             :seed_nif,
             :init_nif,

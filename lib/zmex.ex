@@ -66,6 +66,31 @@ defmodule Zmex.EncrustedNif do
   end
 end
 
+defmodule Diagnostics do
+  @enforce_keys [
+    :seed_nif,
+    :init_nif,
+    :step_1_nif,
+    :send_line_nif,
+    :send_char_nif,
+    :unicode_table_nif,
+    :step_2_nif,
+    :output_nif,
+    :save_nif
+  ]
+  defstruct [
+    :seed_nif,
+    :init_nif,
+    :step_1_nif,
+    :send_line_nif,
+    :send_char_nif,
+    :unicode_table_nif,
+    :step_2_nif,
+    :output_nif,
+    :save_nif
+  ]
+end
+
 defmodule Zmex do
   alias Zmex.EncrustedNif
   import DryDoc
@@ -246,12 +271,18 @@ defmodule Zmex do
         rest_diagnostics
 
       true ->
-        for key <- Enum.uniq(Map.keys(first_diagnostics) ++ Map.keys(rest_diagnostics)),
-            into: %{} do
-          {key, Map.fetch!(first_diagnostics, key) ++ Map.fetch!(rest_diagnostics, key)}
-          # Force diagnostics maps to match with uniq and fetch!; will error out otherwise.
-          # Performance is not a concern, diagnostics map size will be small.
-        end
+        %Diagnostics{
+          seed_nif: first_diagnostics.seed_nif ++ rest_diagnostics.seed_nif,
+          init_nif: first_diagnostics.init_nif ++ rest_diagnostics.init_nif,
+          step_1_nif: first_diagnostics.step_1_nif ++ rest_diagnostics.step_1_nif,
+          send_line_nif: first_diagnostics.send_line_nif ++ rest_diagnostics.send_line_nif,
+          send_char_nif: first_diagnostics.send_char_nif ++ rest_diagnostics.send_char_nif,
+          unicode_table_nif:
+            first_diagnostics.unicode_table_nif ++ rest_diagnostics.unicode_table_nif,
+          step_2_nif: first_diagnostics.step_2_nif ++ rest_diagnostics.step_2_nif,
+          output_nif: first_diagnostics.output_nif ++ rest_diagnostics.output_nif,
+          save_nif: first_diagnostics.save_nif ++ rest_diagnostics.save_nif
+        }
     end
   end
 
@@ -605,7 +636,7 @@ defmodule Zmex do
 
     seed = {seed_a, seed_b, seed_c, seed_d}
 
-    diagnostics = %{
+    diagnostics = %Diagnostics{
       seed_nif: [
         {
           :generate_zmachine_random_seed,
@@ -710,7 +741,7 @@ defmodule Zmex do
     diagnostics =
       case step_1 do
         "ReadLine" ->
-          %{
+          %Diagnostics{
             diagnostics
             | send_line_nif: [
                 {
@@ -726,7 +757,7 @@ defmodule Zmex do
           }
 
         "ReadChar" ->
-          %{
+          %Diagnostics{
             diagnostics
             | send_char_nif: [
                 {
