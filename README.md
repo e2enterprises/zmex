@@ -23,7 +23,7 @@ from Elixir and run classic text-adventure games
 
 ## Installation
 
-Add `{:zmex, "~> 0.1.1"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
+Add `{:zmex, "~> 0.1.2"}` to your list of dependencies in `mix.exs`, then run `mix deps.get`.
 
 ## Reference Sheet
 

@@ -2,7 +2,7 @@ defmodule Zmex.MixProject do
   use Mix.Project
 
   @name "Zmex"
-  @version "0.1.1"
+  @version "0.1.2"
   @repository "https://github.com/e2enterprises/zmex"
 
   defp description() do
