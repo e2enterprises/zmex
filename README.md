@@ -257,9 +257,6 @@ scenarios; marking NIFs as
 ["dirty"](https://www.erlang.org/doc/apps/erts/erl_nif.html#dirty_nifs)
 will provide a fallback in cases where execution times exceed the 1ms threshold.
 
-> [!WARNING]
-> Configurable NIF scheduling strategy is not yet implemented, but on roadmap.
-
 Zmex internally relies on [Folly's](https://github.com/bkirwi/folly) implementation
 of a Z-machine in Rust,
 [Encrusted Heart](https://github.com/bkirwi/folly/tree/master/encrusted-heart). This
