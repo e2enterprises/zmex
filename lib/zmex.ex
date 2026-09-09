@@ -66,31 +66,6 @@ defmodule Zmex.EncrustedNif do
   end
 end
 
-defmodule Diagnostics do
-  @enforce_keys [
-    :seed_nif,
-    :init_nif,
-    :step_1_nif,
-    :send_line_nif,
-    :send_char_nif,
-    :unicode_table_nif,
-    :step_2_nif,
-    :output_nif,
-    :save_nif
-  ]
-  defstruct [
-    :seed_nif,
-    :init_nif,
-    :step_1_nif,
-    :send_line_nif,
-    :send_char_nif,
-    :unicode_table_nif,
-    :step_2_nif,
-    :output_nif,
-    :save_nif
-  ]
-end
-
 defmodule Zmex do
   alias Zmex.EncrustedNif
   import DryDoc
@@ -126,6 +101,33 @@ defmodule Zmex do
   #   {save: binary, output: str, seed: {i32, i32, i32, i32} }
   # diagnostics: true ->
   #   {save: binary, output: str, seed: {i32 x 4}, diagostics: %Diagnostics{} }
+
+  defmodule Diagnostics do
+    @moduledoc doc_from_readme()
+
+    @enforce_keys [
+      :seed_nif,
+      :init_nif,
+      :step_1_nif,
+      :send_line_nif,
+      :send_char_nif,
+      :unicode_table_nif,
+      :step_2_nif,
+      :output_nif,
+      :save_nif
+    ]
+    defstruct [
+      :seed_nif,
+      :init_nif,
+      :step_1_nif,
+      :send_line_nif,
+      :send_char_nif,
+      :unicode_table_nif,
+      :step_2_nif,
+      :output_nif,
+      :save_nif
+    ]
+  end
 
   # new_game/1 [story: binary]
   def new_game(story), do: new_game(story, "")

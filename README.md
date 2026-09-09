@@ -184,7 +184,48 @@ writes the data directly to a file.
 
 ## Diagnostics
 
-TODO
+<!-- @moduledoc Zmex.Diagnostics -->
+
+Passing `diagnostics: true` as a keyword option to either `Zmex.new_game` or
+`Zmex.continue` will cause these functions to reurn a 4-tuple
+`{save, output, seed, diagnostics}` instead of the normal 3-tuple \
+`{save, output, seed}`. The `diagnostics` value is struct containing detailed timing
+information about NIF execution. All keys are required; they will always be present.
+
+```elixir
+%Diagnostics{
+  seed_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  init_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  step_1_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  send_line_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  send_char_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  unicode_table_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  step_2_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  output_nif: [{nif, dirty?, called?, duration, input, output, result}],
+  save_nif: [{nif, dirty?, called?, duration, input, output, result}],
+}
+```
+
+Each NIF execution record is a list of 7-tuples containing these values:
+
+```elixir
+{nif, dirty?, called?, duration, input, output, result}
+ atom   bool     bool  int (ms)   str    str      any
+```
+- **`nif`:** An atom corresponding with the name of the Rust NIF function.
+- **`dirty?`:** Whether the NIF was marked with `#[rustler::nif(schedule = "DirtyCpu")]` in Rust.
+- **`called?`:** Whether this particular NIF was actually called.
+- **`duration`:** Number of milliseconds this NIF took to execute.
+- **`input`:** User input for the game step this NIF was called during.
+- **`output`:** Game output for the game step this NIF was called during.
+- **`result`:** The value that this NIF returned.
+
+Lists are used because in some cases, for instance when the `step_through_blank` option
+is set to `true`, there may be multiple rounds of all NIFs being executed during a
+single `Zmex.new_game` or `Zmex.continue` call. In this case, each list entry in
+`%Diagnostics{}` would contain multiple 7-tuples.
+
+<!-- /@moduledoc Zmex.Diagnostics -->
 
 ## Implementation Notes
 
