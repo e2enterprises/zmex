@@ -3,7 +3,7 @@ defmodule ZmexTest do
   alias ZmexTest.Utils
   doctest Zmex
 
-  test "[single-input] starts new games and continues them sucessfully" do
+  test "[single-input] multiple new game start and continue" do
     Utils.play_adventure()
     Utils.play_anchorhead()
     Utils.play_anchorhead()
@@ -11,7 +11,7 @@ defmodule ZmexTest do
     Utils.play_anchorhead()
   end
 
-  test "[single-input] :step_through_blank option works as expected" do
+  test "[single-input] :step_through_blank option" do
     Utils.play_adventure(step_through_blank: true)
     Utils.play_anchorhead(step_through_blank: true)
     Utils.play_anchorhead(step_through_blank: true)
@@ -19,7 +19,7 @@ defmodule ZmexTest do
     Utils.play_anchorhead(step_through_blank: true)
   end
 
-  test "[single-input] :diagnostics option works as expected" do
+  test "[single-input] :diagnostics option" do
     Utils.play_adventure(diagnostics: true)
     Utils.play_anchorhead(diagnostics: true)
     Utils.play_anchorhead(diagnostics: true)
@@ -27,15 +27,26 @@ defmodule ZmexTest do
     Utils.play_anchorhead(diagnostics: true)
   end
 
-  test "[single-input] all options set together work as expected" do
+  test "[single-input] :dirty_nifs option" do
+    Utils.play_adventure(dirty_nifs: [:step_zmachine, :init_zmachine])
+    Utils.play_anchorhead(diagnostics: true, dirty_nifs: [:step_zmachine])
+  end
+
+  test "[single-input] multiple options set together" do
     Utils.play_adventure(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
-    Utils.play_adventure(step_through_blank: true, diagnostics: true)
+
+    Utils.play_adventure(
+      step_through_blank: true,
+      diagnostics: true,
+      dirty_nifs: [:drain_zmachine_output]
+    )
+
     Utils.play_anchorhead(step_through_blank: true, diagnostics: true)
   end
 
-  test " [multi-input] starts new games and continues them sucessfully" do
+  test " [multi-input] multiple new game start and continue" do
     Utils.play_adventure_multiple_inputs()
     Utils.play_anchorhead_multiple_inputs()
     Utils.play_anchorhead_multiple_inputs()
@@ -43,7 +54,7 @@ defmodule ZmexTest do
     Utils.play_anchorhead_multiple_inputs()
   end
 
-  test " [multi-input] :step_through_blank option works as expected" do
+  test " [multi-input] :step_through_blank option" do
     Utils.play_adventure_multiple_inputs(step_through_blank: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
@@ -51,7 +62,7 @@ defmodule ZmexTest do
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true)
   end
 
-  test " [multi-input] :diagnostics option works as expected" do
+  test " [multi-input] :diagnostics option" do
     Utils.play_adventure_multiple_inputs(diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
@@ -59,11 +70,22 @@ defmodule ZmexTest do
     Utils.play_anchorhead_multiple_inputs(diagnostics: true)
   end
 
-  test " [multi-input] all options set together work as expected" do
+  test " [multi-input] :dirty_nifs option" do
+    Utils.play_adventure_multiple_inputs(dirty_nifs: [:step_zmachine, :init_zmachine])
+    Utils.play_anchorhead_multiple_inputs(diagnostics: true, dirty_nifs: [:step_zmachine])
+  end
+
+  test " [multi-input] multiple options set together" do
     Utils.play_adventure_multiple_inputs(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true, diagnostics: true)
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true, diagnostics: true)
-    Utils.play_adventure_multiple_inputs(step_through_blank: true, diagnostics: true)
+
+    Utils.play_adventure_multiple_inputs(
+      step_through_blank: true,
+      diagnostics: true,
+      dirty_nifs: [:drain_zmachine_output]
+    )
+
     Utils.play_anchorhead_multiple_inputs(step_through_blank: true, diagnostics: true)
   end
 end
@@ -121,7 +143,7 @@ defmodule ZmexTest.Utils do
     end
   end
 
-  defp assert_valid_diagnostics(diagnostics?, diagnostics) do
+  defp assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs) do
     if diagnostics? do
       diagnostics = Map.from_struct(diagnostics)
 
@@ -142,7 +164,13 @@ defmodule ZmexTest.Utils do
           for record <- list do
             {nif, dirty?, called?, duration, input, output, _result} = record
             assert is_atom(nif)
-            assert is_boolean(dirty?)
+
+            if dirty_nifs != nil and nif in dirty_nifs do
+              assert dirty? == true
+            else
+              assert dirty? == false
+            end
+
             assert is_boolean(called?)
             assert is_number(duration) or duration == nil
             assert duration >= 0
@@ -157,6 +185,7 @@ defmodule ZmexTest.Utils do
   def play_adventure(opts \\ []) do
     story = load_story("advent.z3")
     diagnostics? = Keyword.get(opts, :diagnostics)
+    dirty_nifs = Keyword.get(opts, :dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(
@@ -175,7 +204,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "y", opts))
@@ -191,7 +220,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "north", opts))
@@ -204,7 +233,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "E", opts))
@@ -218,7 +247,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
   end
 
   def play_anchorhead(opts \\ []) do
@@ -229,6 +258,7 @@ defmodule ZmexTest.Utils do
       )
 
     diagnostics? = Keyword.get(opts, :diagnostics)
+    dirty_nifs = Keyword.get(opts, :dirty_nifs)
     expect_blank_step? = !Keyword.get(opts, :step_through_blank)
 
     {save, output, seed, diagnostics} =
@@ -249,7 +279,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "", opts))
@@ -260,7 +290,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       if expect_blank_step? do
@@ -283,7 +313,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "north", opts))
@@ -297,7 +327,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
 
     {save, output, seed, diagnostics} =
       with_diagnostics_or_nil(Zmex.continue(story, save, "E", opts))
@@ -312,12 +342,13 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
   end
 
   def play_adventure_multiple_inputs(opts \\ []) do
     story = load_story("advent.z3")
     diagnostics? = Keyword.get(opts, :diagnostics)
+    dirty_nifs = Keyword.get(opts, :dirty_nifs)
     inputs = ["n", "north", "E"]
 
     {save, output, seed, diagnostics} =
@@ -341,7 +372,7 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
   end
 
   def play_anchorhead_multiple_inputs(opts \\ []) do
@@ -352,6 +383,7 @@ defmodule ZmexTest.Utils do
       )
 
     diagnostics? = Keyword.get(opts, :diagnostics)
+    dirty_nifs = Keyword.get(opts, :dirty_nifs)
     expect_blank_step? = !Keyword.get(opts, :step_through_blank)
 
     inputs =
@@ -386,6 +418,6 @@ defmodule ZmexTest.Utils do
              seed
            )
 
-    assert_valid_diagnostics(diagnostics?, diagnostics)
+    assert_valid_diagnostics(diagnostics?, diagnostics, dirty_nifs)
   end
 end
