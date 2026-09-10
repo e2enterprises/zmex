@@ -1,106 +1,4 @@
 defmodule ZmexCli do
-  defp generate_random_seed() do
-    max = 2 ** 31
-    min = -max
-    rng = fn -> Enum.random(min..max) end
-    {rng.(), rng.(), rng.(), rng.()}
-  end
-
-  defp parse_seed(seed) do
-    case Base.decode64(seed, padding: false) do
-      {:ok, term} -> :erlang.binary_to_term(term)
-      _ -> raise(ArgumentError, "invalid base64 seed value (seed: #{seed})")
-    end
-  end
-
-  defp serialize_seed({a, b, c, d} = seed)
-       when is_number(a) and is_number(b) and is_number(c) and is_number(d) do
-    seed |> :erlang.term_to_binary() |> Base.encode64(padding: false)
-  end
-
-  defp format_nif_diagnostic_records(records) do
-    records
-    |> Stream.map(fn {nif, dirty?, called?, duration, _input, _output, _result} ->
-      {nif, dirty?, called?, duration}
-    end)
-    |> Stream.filter(fn {_nif, _dirty?, called?, _duration} -> called? end)
-    |> Stream.map(fn {nif, dirty?, _called?, duration} ->
-      dirty =
-        if dirty? do
-          "_dirty_cpu"
-        else
-          ""
-        end
-
-      if duration <= 1 do
-        "#{duration}ms ✔ #{nif}#{dirty}"
-      else
-        "#{duration}ms #{nif}#{dirty}"
-      end
-    end)
-    |> Enum.join(" -> ")
-  end
-
-  defp get_story_path(story_file) do
-    Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
-  end
-
-  defp get_save_path(story_path) do
-    Path.join(
-      Path.dirname(story_path),
-      Path.basename(story_path, Path.extname(story_path)) <>
-        "_save.qz"
-    )
-  end
-
-  def loop(argv \\ []) do
-    args =
-      OptionParser.parse!(
-        argv || System.argv(),
-        switches: [
-          reset: :boolean,
-          seed: :string,
-          help: :boolean,
-          verbose: :boolean,
-          diagnostics: :boolean,
-          dirtynifs: :string
-        ],
-        aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
-      )
-
-    {options, [story_file | _input]} = args
-
-    reset? = Keyword.get(options, :reset, false)
-    has_seed? = !!Keyword.get(options, :seed)
-    continuing? = story_file |> get_story_path() |> get_save_path() |> File.exists?()
-
-    input =
-      cond do
-        # Entirely new game; title text will be shown:
-        reset? or not continuing? -> ""
-        # Ensure game gives player context before 1st prompt ("look" at surroundings):
-        not has_seed? -> "look"
-        # Otherwise, normal game loop; prompt the player for input:
-        true -> IO.gets("\n\n> ") |> String.trim()
-      end
-
-    options =
-      if has_seed? do
-        options
-      else
-        seed = generate_random_seed() |> serialize_seed()
-        Keyword.put(options, :seed, seed)
-      end
-
-    new_args = OptionParser.to_argv(options) ++ [story_file, input]
-
-    main(new_args)
-
-    new_args_without_reset = new_args |> List.delete("--reset") |> List.delete("-R")
-
-    loop(new_args_without_reset)
-  end
-
   def main(argv \\ []) do
     argv || System.argv()
 
@@ -289,5 +187,107 @@ defmodule ZmexCli do
     end
 
     IO.write(output)
+  end
+
+  def loop(argv \\ []) do
+    args =
+      OptionParser.parse!(
+        argv || System.argv(),
+        switches: [
+          reset: :boolean,
+          seed: :string,
+          help: :boolean,
+          verbose: :boolean,
+          diagnostics: :boolean,
+          dirtynifs: :string
+        ],
+        aliases: [R: :reset, s: :seed, h: :help, V: :verbose, d: :diagnostics, D: :diagnostics]
+      )
+
+    {options, [story_file | _input]} = args
+
+    reset? = Keyword.get(options, :reset, false)
+    has_seed? = !!Keyword.get(options, :seed)
+    continuing? = story_file |> get_story_path() |> get_save_path() |> File.exists?()
+
+    input =
+      cond do
+        # Entirely new game; title text will be shown:
+        reset? or not continuing? -> ""
+        # Ensure game gives player context before 1st prompt ("look" at surroundings):
+        not has_seed? -> "look"
+        # Otherwise, normal game loop; prompt the player for input:
+        true -> IO.gets("\n\n> ") |> String.trim()
+      end
+
+    options =
+      if has_seed? do
+        options
+      else
+        seed = generate_random_seed() |> serialize_seed()
+        Keyword.put(options, :seed, seed)
+      end
+
+    new_args = OptionParser.to_argv(options) ++ [story_file, input]
+
+    main(new_args)
+
+    new_args_without_reset = new_args |> List.delete("--reset") |> List.delete("-R")
+
+    loop(new_args_without_reset)
+  end
+
+  defp get_story_path(story_file) do
+    Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
+  end
+
+  defp get_save_path(story_path) do
+    Path.join(
+      Path.dirname(story_path),
+      Path.basename(story_path, Path.extname(story_path)) <>
+        "_save.qz"
+    )
+  end
+
+  defp generate_random_seed() do
+    max = 2 ** 31
+    min = -max
+    rng = fn -> Enum.random(min..max) end
+    {rng.(), rng.(), rng.(), rng.()}
+  end
+
+  defp parse_seed(seed) do
+    case Base.decode64(seed, padding: false) do
+      {:ok, term} -> :erlang.binary_to_term(term)
+      _ -> raise(ArgumentError, "invalid base64 seed value (seed: #{seed})")
+    end
+  end
+
+  defp serialize_seed({a, b, c, d} = seed)
+       when is_number(a) and is_number(b) and is_number(c) and is_number(d) do
+    seed |> :erlang.term_to_binary() |> Base.encode64(padding: false)
+  end
+
+  defp format_nif_diagnostic_records(records) do
+    records
+    |> Stream.map(fn {nif, dirty?, called?, duration, _input, _output, _result} ->
+      {nif, dirty?, called?, duration}
+    end)
+    |> Stream.filter(fn {_nif, _dirty?, called?, _duration} -> called? end)
+    |> Stream.map(fn {nif, dirty?, _called?, duration} ->
+      dirty =
+        if dirty? do
+          "_dirty_cpu"
+        else
+          ""
+        end
+
+      if duration <= 1 do
+        "#{duration}ms ✔ #{nif}#{dirty}"
+      else
+        "#{duration}ms #{nif}#{dirty}"
+      end
+    end)
+    |> Enum.join(" -> ")
   end
 end
