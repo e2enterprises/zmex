@@ -78,11 +78,11 @@ You've just started a new game of [Adventure](https://dwheeler.com/adventure/).
 The raw "UI" isn't as cozy a gameplay experience as we'd usually like, but it
 provides everything you need to build your own Elixir applications around the
 "[Encrusted Heart](https://github.com/bkirwi/folly/tree/master/encrusted-heart)"
-Z-machine implementation.
+Z‑machine implementation.
 
 These three values were returned from `Zmex.new_game`
 - **`save`**: The call to `Zmex.new_game` produced binary-data representation of the
-  current internal state of the Z-machine. Zmex is entirely stateless on its
+  current internal state of the Z‑machine. Zmex is entirely stateless on its
   own; you choose what to do with this save data. Keep it in memory, write to
   a file, whatever you want. It just needs to be passed with the next call
   to continue the game.
@@ -90,20 +90,20 @@ These three values were returned from `Zmex.new_game`
   responding to user input, but in the case of `Zmex.new_game` input can
   be blank and output generally contains the "title-page" or "intro" text
   of the game being played. Only way to know for sure is to play the game!
-- **`seed`**: Every play-through of a Z-machine game continually passes a seed value
-  to the Z-machine's internal random number generator (RNG). Generally you'll want
+- **`seed`**: Every play-through of a Z‑machine game continually passes a seed value
+  to the Z‑machine's internal random number generator (RNG). Generally you'll want
   to hang on to the seed produced during `Zmex.new_game`
   and pass that same seed with every subsequent `Zmex.continue` call. Changing seed
   midway during a game won't cause egregious errors, but has the potential to cause
   subtler issues; see
-  [The Z-machine, And How To Emulate It (PDF)](https://mirror.ifarchive.org/if-archive/infocom/interpreters/specification/zspec02/zmach06e.pdf)
+  [The Z‑machine, And How To Emulate It (PDF)](https://mirror.ifarchive.org/if-archive/infocom/interpreters/specification/zspec02/zmach06e.pdf)
   for more context, specifically section **_2.6. Random number generator_**.
   Ultimately, how you handle RNG seeds is up to you and your application's specific
-  needs; Zmex simply aims to make this aspect of Z-machine operation transparent and
+  needs; Zmex simply aims to make this aspect of Z‑machine operation transparent and
   straightforward to work with.
-  - Per the Z-machine impl. Zmex uses, the seed is always a 4-tuple of uniformly
+  - Per the Z‑machine impl. Zmex uses, the seed is always a 4-tuple of uniformly
     random **32-bit _signed_ integers** (though they're converted to unsigned
-    ints when passed to Z-machine during NIF execution).
+    ints when passed to Z‑machine during NIF execution).
 
 ```elixir
 iex[3]> {save, output, seed} = Zmex.continue(story, save, "n", seed: seed)
@@ -243,15 +243,15 @@ receives input data\
 (`save`, `output`, `seed`) but the caller must decide what is done with that data;
 whether it's just held in memory, or persisted to database or disk.
 
-A natural critique of this approach is that starting up an entire Z-machine instance
+A natural critique of this approach is that starting up an entire Z‑machine instance
 fresh during every step of gameplay seems wasteful. Indeed, interacting with a
-persistently-running Z-machine instance would likely be a more optimal use of
+persistently-running Z‑machine instance would likely be a more optimal use of
 resources, but it would come at a cost: simplicity, and natural integration with
 OTP and the BEAM, Elixir's (and Erlang's) much-beloved runtime. BEAM and state are
 oil and water; what goes with the flow is work that can be split into small
 pieces and spread across many independent workers. Thanks to the raw performance of
 Rust, and the elegant bridge to it provided by
-[Rustler](https://github.com/rusterlium/rustler), working with a Z-machine in a way
+[Rustler](https://github.com/rusterlium/rustler), working with a Z‑machine in a way
 that fits this ideal interaction model is now possible in Elixir.
 
 Great pains have been taken to ensure that all NIFs called by Zmex return in under
@@ -266,7 +266,7 @@ scenarios; marking NIFs as
 will provide a fallback in cases where execution times exceed the 1ms threshold.
 
 Zmex internally relies on [Folly's](https://github.com/bkirwi/folly) implementation
-of a Z-machine in Rust,
+of a Z‑machine in Rust,
 [Encrusted Heart](https://github.com/bkirwi/folly/tree/master/encrusted-heart). This
 work in turn is based on the original
 [Encrusted](https://github.com/DeMille/encrusted),
