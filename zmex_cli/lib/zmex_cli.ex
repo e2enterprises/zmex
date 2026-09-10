@@ -1,17 +1,24 @@
 defmodule ZmexCli do
-  def parse_seed(seed) do
+  defp generate_random_seed() do
+    max = 2 ** 31
+    min = -max
+    rng = fn -> Enum.random(min..max) end
+    {rng.(), rng.(), rng.(), rng.()}
+  end
+
+  defp parse_seed(seed) do
     case Base.decode64(seed, padding: false) do
       {:ok, term} -> :erlang.binary_to_term(term)
       _ -> raise(ArgumentError, "invalid base64 seed value (seed: #{seed})")
     end
   end
 
-  def serialize_seed({a, b, c, d} = seed)
-      when is_number(a) and is_number(b) and is_number(c) and is_number(d) do
+  defp serialize_seed({a, b, c, d} = seed)
+       when is_number(a) and is_number(b) and is_number(c) and is_number(d) do
     seed |> :erlang.term_to_binary() |> Base.encode64(padding: false)
   end
 
-  def format_nif_diagnostic_records(records) do
+  defp format_nif_diagnostic_records(records) do
     records
     |> Stream.map(fn {nif, dirty?, called?, duration, _input, _output, _result} ->
       {nif, dirty?, called?, duration}
@@ -34,6 +41,18 @@ defmodule ZmexCli do
     |> Enum.join(" -> ")
   end
 
+  defp get_story_path(story_file) do
+    Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
+  end
+
+  defp get_save_path(story_path) do
+    Path.join(
+      Path.dirname(story_path),
+      Path.basename(story_path, Path.extname(story_path)) <>
+        "_save.qz"
+    )
+  end
+
   def loop(argv \\ []) do
     args =
       OptionParser.parse!(
@@ -51,11 +70,26 @@ defmodule ZmexCli do
 
     {options, [story_file | _input]} = args
 
+    reset? = Keyword.get(options, :reset, false)
+    has_seed? = !!Keyword.get(options, :seed)
+    continuing? = story_file |> get_story_path() |> get_save_path() |> File.exists?()
+
     input =
-      if Keyword.get(options, :reset, false) do
-        ""
+      cond do
+        # Entirely new game; title text will be shown:
+        reset? or not continuing? -> ""
+        # Ensure game gives player context before 1st prompt ("look" at surroundings):
+        not has_seed? -> "look"
+        # Otherwise, normal game loop; prompt the player for input:
+        true -> IO.gets("\n\n> ") |> String.trim()
+      end
+
+    options =
+      if has_seed? do
+        options
       else
-        IO.gets("\n\n> ") |> String.trim()
+        seed = generate_random_seed() |> serialize_seed()
+        Keyword.put(options, :seed, seed)
       end
 
     new_args = OptionParser.to_argv(options) ++ [story_file, input]
@@ -94,15 +128,8 @@ defmodule ZmexCli do
     dirty_nifs = Keyword.get(options, :dirtynifs, "")
 
     dirty_nifs = dirty_nifs |> String.split(",") |> Enum.map(&String.to_atom/1)
-
-    story_path = Path.join("../native/encrusted_nif/encrusted-heart/tests", story_file)
-
-    save_path =
-      Path.join(
-        Path.dirname(story_path),
-        Path.basename(story_path, Path.extname(story_path)) <>
-          "_save.qz"
-      )
+    story_path = get_story_path(story_file)
+    save_path = get_save_path(story_path)
 
     load_story = fn ->
       case File.read(story_path) do
@@ -118,13 +145,13 @@ defmodule ZmexCli do
       end
     end
 
-    {story_time, story} =
+    {load_story_microsec, story} =
       cond do
         verbose -> :timer.tc(load_story, [])
         true -> {nil, load_story.()}
       end
 
-    {save_time, save} =
+    {load_save_microsec, save} =
       cond do
         reset -> {nil, <<>>}
         verbose -> :timer.tc(load_save, [])
@@ -200,10 +227,10 @@ defmodule ZmexCli do
     if verbose do
       IO.puts("    Seed | b64 : #{serialize_seed(seed)}")
       IO.puts("         | raw : #{inspect(seed)}")
-      IO.puts("  Timing | Load Story Data                    : #{story_time / 1000}ms")
+      IO.puts("  Timing | Load Story Data                    : #{load_story_microsec / 1000}ms")
 
       if !reset do
-        IO.puts("         | Loading Save Data                  : #{save_time / 1000}ms")
+        IO.puts("         | Loading Save Data                  : #{load_save_microsec / 1000}ms")
       end
 
       if diagnostics.seed_nif > 0 do
