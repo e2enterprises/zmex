@@ -17,7 +17,7 @@ defmodule Zmex.EncrustedNif do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def send_line_to_zmachine(_zmachine_resource_arc, _input) do
+  def send_text_to_zmachine(_zmachine_resource_arc, _input) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -49,7 +49,7 @@ defmodule Zmex.EncrustedNif do
     :erlang.nif_error(:nif_not_loaded)
   end
 
-  def send_line_to_zmachine_dirty_cpu(_zmachine_resource_arc, _input) do
+  def send_text_to_zmachine_dirty_cpu(_zmachine_resource_arc, _input) do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -457,9 +457,9 @@ defmodule Zmex do
       "ReadLine" ->
         call_nif(
           dirty_nifs,
-          :send_line_to_zmachine,
-          &EncrustedNif.send_line_to_zmachine/2,
-          &EncrustedNif.send_line_to_zmachine_dirty_cpu/2,
+          :send_text_to_zmachine,
+          &EncrustedNif.send_text_to_zmachine/2,
+          &EncrustedNif.send_text_to_zmachine_dirty_cpu/2,
           [zmachine, input]
         )
 
@@ -572,9 +572,9 @@ defmodule Zmex do
           {send_nif_microsec, {}} =
             call_nif_with_timer(
               dirty_nifs,
-              :send_line_to_zmachine,
-              &EncrustedNif.send_line_to_zmachine/2,
-              &EncrustedNif.send_line_to_zmachine_dirty_cpu/2,
+              :send_text_to_zmachine,
+              &EncrustedNif.send_text_to_zmachine/2,
+              &EncrustedNif.send_text_to_zmachine_dirty_cpu/2,
               [zmachine, input]
             )
 
@@ -674,7 +674,7 @@ defmodule Zmex do
       ],
       send_line_nif: [
         {
-          :send_line_to_zmachine,
+          :send_text_to_zmachine,
           false,
           false,
           nil,
@@ -747,8 +747,8 @@ defmodule Zmex do
             diagnostics
             | send_line_nif: [
                 {
-                  :send_line_to_zmachine,
-                  :send_line_to_zmachine in dirty_nifs,
+                  :send_text_to_zmachine,
+                  :send_text_to_zmachine in dirty_nifs,
                   true,
                   send_nif_microsec / 1000,
                   input,

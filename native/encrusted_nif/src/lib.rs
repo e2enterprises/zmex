@@ -87,7 +87,7 @@ fn step_zmachine(arc: ResourceArc<ZmachineResource>) -> String {
 }
 
 #[rustler::nif]
-fn send_line_to_zmachine(
+fn send_text_to_zmachine(
     arc: ResourceArc<ZmachineResource>,
     input: String,
 ) -> NifResult<()> {
@@ -245,7 +245,7 @@ fn step_zmachine_dirty_cpu(arc: ResourceArc<ZmachineResource>) -> String {
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn send_line_to_zmachine_dirty_cpu(
+fn send_text_to_zmachine_dirty_cpu(
     arc: ResourceArc<ZmachineResource>,
     input: String,
 ) -> NifResult<()> {
